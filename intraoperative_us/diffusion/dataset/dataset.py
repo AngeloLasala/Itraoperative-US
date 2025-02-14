@@ -41,13 +41,13 @@ class IntraoperativeUS():
     """
     def __init__(self, size, dataset_path, im_channels, split,
                  splitting_seed, train_percentage, val_percentage, test_percentage,
-                 condition_config=None, data_augmentation=None):
+                 condition_config=None, data_augmentation=False):
 
         self.dataset_path = dataset_path
 
         # condition and data augmentation parameters
         self.condition_types = [] if condition_config is None else condition_config['condition_types']
-        self.data_augmentation = data_augmentation if data_augmentation is not None else None
+        self.data_augmentation = data_augmentation
         
         #img parameters
         self.size = size
@@ -80,8 +80,8 @@ class IntraoperativeUS():
 
             ################ IMAGE CONDITION ###################################
             if 'image' in self.condition_types:
-                if self.data_augmentation_image is not None:
-                    im_tensor, label = self.data_augmentation_image(im, label)
+                if self.data_augmentation:
+                    im_tensor, label_tensor = self.augmentation(im, label)
                 else:
                     im_tensor, label_tensor = self.trasform(im, label)
                 cond_inputs['image'] = label_tensor
@@ -89,8 +89,8 @@ class IntraoperativeUS():
             return im_tensor, cond_inputs   
 
         else: # no condition
-            if self.data_augmentation is not None:
-                im_tensor = self.data_augmentation(im)
+            if self.data_augmentation:
+                im_tensor = self.augmentation(im)
             else:
                 resize = transforms.Resize(size=self.size)
                 image = resize(im)
@@ -150,7 +150,7 @@ class IntraoperativeUS():
 
         return image_label_dict
 
-    def data_augmentation(self, image, label=None):
+    def augmentation(self, image, label=None):
         """
         Set of trasformation to apply to image.
         """
@@ -239,8 +239,17 @@ if __name__ == '__main__':
                                splitting_seed=dataset_config['splitting_seed'],
                                train_percentage=dataset_config['train_percentage'],
                                val_percentage=dataset_config['val_percentage'],
-                               test_percentage=dataset_config['test_percentage'])
+                               test_percentage=dataset_config['test_percentage'],
+                               condition_config=config['autoencoder_params']['condition_config'],
+                               data_augmentation=True)
                             
-    dataset[0]
-   
+    # im, lab = dataset[100]
+    # print(im, lab)
+
+    # ## convert in numpy and plot the image
+    # im = im.numpy().transpose(1,2,0)
+    # lab = lab['image'].numpy().transpose(1,2,0)
+    # plt.imshow(im, cmap='gray')
+    # # plt.imshow(lab, cmap='jet', alpha=0.5)
+    # plt.show()
 
