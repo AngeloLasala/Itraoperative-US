@@ -280,7 +280,7 @@ def slicing_volume(volume_array, tumor_array, sulci_array, falx_array, spacing, 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Read the dataset of the RESECT iUS dataset')
     parser.add_argument('--dataset_path', type=str, default="/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset", help='Path to the dataset')
-    parser.add_argument('--log', type=str, default='DEBUG', help='Logging level')
+    parser.add_argument('--log', type=str, default='debug', help='Logging level')
     args = parser.parse_args()
 
     ## set the logger
