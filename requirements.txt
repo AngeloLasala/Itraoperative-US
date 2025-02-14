@@ -1,0 +1,13 @@
+einops==0.8.1
+matplotlib==3.10.0
+pandas==2.2.3
+Pillow==11.1.0
+PyYAML==6.0.2
+scipy==1.15.1
+seaborn==0.13.2
+setuptools==75.8.0
+SimpleITK==2.4.1
+torch==2.6.0+cu126
+torchsummary==1.5.1
+torchvision==0.21.0+cu126
+tqdm==4.67.1
