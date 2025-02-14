@@ -10,6 +10,7 @@ import logging
 import argparse
 import tqdm
 import seaborn as sns
+from PIL import Image
 
 def check_subject_volume(dataset_path):
     """
@@ -244,15 +245,22 @@ def slicing_volume(volume_array, tumor_array, sulci_array, falx_array, spacing, 
         ## save the dataset
         if save_dataset:
             vol = volume_array[slice_i, :, :]
-            tum = tumor_array[slice_i, :, :]
-            sul = sulci_array[slice_i, :, :]
-            fal = falx_array[slice_i, :, :]
+            tum = tumor_array[slice_i, :, :]*255
+            sul = sulci_array[slice_i, :, :]*255
+            fal = falx_array[slice_i, :, :]*255
 
-            np.save(os.path.join(subject_path, 'volume', f'{subject}_{slice_i}.npy'), vol.astype(np.float16))
-            np.save(os.path.join(subject_path, 'tumor', f'{subject}_{slice_i}.npy'), tum.astype(np.float16))
-            np.save(os.path.join(subject_path, 'sulci', f'{subject}_{slice_i}.npy'), sul.astype(np.float16))
-            np.save(os.path.join(subject_path, 'falx', f'{subject}_{slice_i}.npy'), fal.astype(np.float16))
-            
+            # convert un PIL image
+            vol = Image.fromarray(vol).convert('L')
+            tum = Image.fromarray(tum).convert('L')
+            sul = Image.fromarray(sul).convert('L')
+            fal = Image.fromarray(fal).convert('L')
+
+            # save the image
+            vol.save(os.path.join(subject_path, 'volume', f'{subject}_{slice_i}.png'))
+            tum.save(os.path.join(subject_path, 'tumor', f'{subject}_{slice_i}.png'))
+            sul.save(os.path.join(subject_path, 'sulci', f'{subject}_{slice_i}.png'))
+            fal.save(os.path.join(subject_path, 'falx', f'{subject}_{slice_i}.png'))
+
             
         # plt.figure(figsize=(15, 15), num=f'{slice_i} slice', tight_layout=True)
         # plt.subplot(1, 2, 1)
