@@ -2,7 +2,7 @@
 GenerativeAI model for synthesizing Intraoperative Ultrasound (iUS)
 
 ## Install
-This repository relys on the [PyTorch]() and [Diffuser](). Before install the requirements please read the official documentation and install torch and diffuser. here a simple example:
+This repository relys on the [PyTorch](https://pytorch.org/get-started/locally/) and [Diffuser](https://huggingface.co/docs/diffusers/installation). Before install the requirements please read the official documentation and install torch and diffuser. here a simple example:
 
 create a virtual env with conda
 ```bash
