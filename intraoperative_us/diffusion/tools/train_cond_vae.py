@@ -9,12 +9,12 @@ import os
 import numpy as np
 import json
 import yaml
-from echocardiography.diffusion.models.cond_vae import condVAE
-from echocardiography.diffusion.models.lpips import LPIPS
-from echocardiography.diffusion.models.discriminator import Discriminator
+from intraoperative_us.diffusion.models.cond_vae import condVAE
+from intraoperative_us.diffusion.models.lpips import LPIPS
+from intraoperative_us.diffusion.models.discriminator import Discriminator
 from torch.utils.data.dataloader import DataLoader
-from echocardiography.diffusion.dataset.dataset import MnistDataset, EcoDataset, CelebDataset
-from echocardiography.diffusion.models.unet_cond_base import get_config_value
+from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
+from intraoperative_us.diffusion.models.unet_cond_base import get_config_value
 from torch.optim import Adam
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt

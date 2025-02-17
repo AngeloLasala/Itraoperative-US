@@ -3,8 +3,8 @@ Unet base model to train LDM
 """
 import torch
 import torch.nn as nn
-from echocardiography.diffusion.models.blocks import get_time_embedding
-from echocardiography.diffusion.models.blocks import DownBlock, MidBlock, UpBlockUnet
+from intraoperative_us.diffusion.models.blocks import get_time_embedding
+from intraoperative_us.diffusion.models.blocks import DownBlock, MidBlock, UpBlockUnet
 
 class Unet(nn.Module):
     """
