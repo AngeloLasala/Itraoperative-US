@@ -15,10 +15,10 @@ from torchvision.utils import make_grid
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from echocardiography.diffusion.dataset.dataset import CelebDataset, MnistDataset, EcoDataset
-from echocardiography.diffusion.models.vqvae import VQVAE
-from echocardiography.diffusion.models.vae import VAE
-from echocardiography.diffusion.models.lpips import LPIPS
+from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
+from intraoperative_us.diffusion.models.vqvae import VQVAE
+from intraoperative_us.diffusion.models.vae import VAE
+from intraoperative_us.diffusion.models.lpips import LPIPS
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
