@@ -2,9 +2,8 @@ dataset_params:
   # parent directory of the dataset
   # local path: 
   #            1) "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset"
-  # one drive: '...'
-  # cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/echo_data/regression'
-  dataset_path: "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"  
+  #            2) cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/ius_data/dataset'
+  dataset_path: "/leonardo_work/IscrC_Med-LMGM/Angelo/ius_data/dataset"  
   im_channels : 1
   im_size_h : 256         # 256
   im_size_w : 256         # 256 
