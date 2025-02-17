@@ -11,5 +11,5 @@
 
 python -m intraoperative_us.diffusion.tools.train_vae --conf conf\
                                                       --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
-                                                      --log 'warning'\  
+                                                      --log 'warning'
  
