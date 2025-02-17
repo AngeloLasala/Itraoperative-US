@@ -49,7 +49,6 @@ def train(conf, save_folder):
                   model_config=autoencoder_config).to(device)
 
 
-    # i have to change this, if a selet more that 1 Batch i want to concatanate the datatset
     data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
                                im_channels= dataset_config['im_channels'], 
