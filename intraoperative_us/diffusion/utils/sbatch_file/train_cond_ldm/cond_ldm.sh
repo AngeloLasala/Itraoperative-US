@@ -11,4 +11,4 @@
 
 python -m intraoperative_us.diffusion.tools.train_cond_ldm --data conf\
           --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
-          --trial trial_2
+          --trial trial_3
