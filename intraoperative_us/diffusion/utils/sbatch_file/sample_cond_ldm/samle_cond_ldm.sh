@@ -10,8 +10,8 @@
 #SBATCH --account=IscrC_Med-LMGM     # account name
 
 for trial in trial_3; do
-    for w in 0.5 1.0 2.0 3.0 4.0; do
-        for epoch in 80 100 120 140 150; do
+    for w in 0.0 0.2 0.4 0.6; do
+        for epoch in 20 40 60 80 100 120 140 150; do
                 python -m intraoperative_us.diffusion.tools.sample_cond_ldm\
                         --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
                         --trial $trial\
