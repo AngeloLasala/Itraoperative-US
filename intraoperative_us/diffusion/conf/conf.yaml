@@ -3,7 +3,7 @@ dataset_params:
   # local path: 
   #            1) "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"
   #            2) cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/ius_data/dataset'
-  dataset_path: "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"  
+  dataset_path: "/leonardo_work/IscrC_Med-LMGM/Angelo/ius_data/dataset"  
   im_channels : 1
   im_size_h : 256         # 256
   im_size_w : 256         # 256 
@@ -89,7 +89,7 @@ train_params:
   commitment_beta: 0.2
   perceptual_weight: 1
   kl_weight: 0.000005
-  ldm_epochs : 150
+  ldm_epochs : 3000
   autoencoder_epochs : 100
   num_samples : 25
   num_grid_rows : 5
@@ -97,4 +97,4 @@ train_params:
   autoencoder_lr: 0.0001
   autoencoder_acc_steps : 1
   autoencoder_img_save_steps : 8
-  save_frequency : 10
+  save_frequency : 150

@@ -169,7 +169,7 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
     logging.info('Start training ...')
     for epoch_idx in range(num_epochs):
         progress_bar = tqdm(total=len(data_loader), disable=False)
-        progress_bar.set_description(f"Epoch {epoch_idx + 1}")
+        progress_bar.set_description(f"Epoch {epoch_idx + 1}/{num_epochs}")
 
         time_start = time.time()
         losses = []
@@ -242,7 +242,7 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
         # Generated images: from the dataset loader of the validation set on wich i apply the diffusion and the decoder
         time_end = time.time()
         total_time = time_end - time_start
-        print(f'Finished epoch:{epoch_idx+1} | Loss : {np.mean(losses):.4f} | Time: {total_time:.4f} sec')
+        print(f'epoch:{epoch_idx+1}/{num_epochs} | Loss : {np.mean(losses):.4f} | Time: {total_time:.4f} sec')
 
         # Save the model
         if (epoch_idx+1) % train_config['save_frequency'] == 0:
