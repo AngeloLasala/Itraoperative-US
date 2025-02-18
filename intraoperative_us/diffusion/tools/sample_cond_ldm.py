@@ -12,24 +12,22 @@ import torchvision
 import argparse
 import yaml
 import os
-from torchvision.utils import make_grid
+import logging
 
-from echocardiography.diffusion.models.unet_cond_base import get_config_value
-from echocardiography.diffusion.models.vqvae import VQVAE
-from echocardiography.diffusion.models.cond_vae import condVAE
-from echocardiography.diffusion.models.vae import VAE 
-import echocardiography.diffusion.models.unet_cond_base as unet_cond_base
-import echocardiography.diffusion.models.unet_base as unet_base
-from echocardiography.diffusion.sheduler.scheduler import LinearNoiseScheduler
-from echocardiography.diffusion.dataset.dataset import MnistDataset, EcoDataset, CelebDataset
-from echocardiography.diffusion.tools.infer_vae import get_best_model
+from torchvision.utils import make_grid
+from intraoperative_us.diffusion.models.unet_cond_base import get_config_value
+from intraoperative_us.diffusion.models.vqvae import VQVAE
+from intraoperative_us.diffusion.models.vae import VAE 
+import intraoperative_us.diffusion.models.unet_cond_base as unet_cond_base
+import intraoperative_us.diffusion.models.unet_base as unet_base
+from intraoperative_us.diffusion.sheduler.scheduler import LinearNoiseScheduler
+from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
+from intraoperative_us.diffusion.tools.infer_vae import get_best_model
 from torch.utils.data import DataLoader
-from echocardiography.diffusion.tools.train_cond_ldm import get_text_embeddeing
-import torch.multiprocessing as mp
+from intraoperative_us.diffusion.tools.train_cond_ldm import get_text_embeddeing
 
 import matplotlib.pyplot as plt
 import cv2
-
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -43,36 +41,29 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
     """
     im_size_h = dataset_config['im_size_h'] // 2**sum(autoencoder_model_config['down_sample'])
     im_size_w = dataset_config['im_size_w'] // 2**sum(autoencoder_model_config['down_sample'])
-    print(f'Resolution of latent space [{im_size_h},{im_size_w}]')
-
-
+    logging.info(f'RESOLUTION OF THE LATENT SPACE [{im_size_h},{im_size_w}]')
 
     # Get the spatial conditional mask, i.e. the heatmaps
-    im_dataset_cls = {
-        'mnist': MnistDataset,
-        'celebhq': CelebDataset,
-        'eco': EcoDataset,
-    }.get(dataset_config['name'])
-
-    print(condition_config)
     condition_config = get_config_value(diffusion_model_config, key='condition_config', default_value=None)
     if condition_config is not None:
         assert 'condition_types' in condition_config, \
             "condition type missing in conditioning config"
         condition_types = condition_config['condition_types']
+    logging.info(f"DIMENSION OF THE LATENT SPACE: {autoencoder_model_config['z_channels']}")
 
-    print('DIMENSION OF THE LATENT SPACE: ', autoencoder_model_config['z_channels'])
-
-    print('dataset', dataset_config['dataset_batch'])
-    data_list = []
-    for dataset_batch in dataset_config['dataset_batch']:
-        data_batch = im_dataset_cls(split=dataset_config['split_val'], size=(dataset_config['im_size_h'], dataset_config['im_size_w']),
-                            parent_dir=dataset_config['parent_dir'], im_path=dataset_config['im_path'], dataset_batch=dataset_batch , phase=dataset_config['phase'],
-                            condition_config=condition_config)
-        data_list.append(data_batch)
-    
-    data_img = torch.utils.data.ConcatDataset(data_list)
-    print('len of the dataset', len(data_img))
+    ## load validation dataset
+    data_img = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+                               dataset_path= dataset_config['dataset_path'],
+                               im_channels= dataset_config['im_channels'], 
+                               split='train',
+                               splitting_seed=dataset_config['splitting_seed'],
+                               train_percentage=dataset_config['train_percentage'],
+                               val_percentage=dataset_config['val_percentage'],
+                               test_percentage=dataset_config['test_percentage'],
+                               condition_config=condition_config,
+                               data_augmentation=False
+                               )                        
+    logging.info(f'len of the dataset: {len(data_img)}')
     data_loader = DataLoader(data_img, batch_size=train_config['ldm_batch_size_sample'], shuffle=False, num_workers=8)
 
     ## if the condition is 'text' i have to load the text model
@@ -93,34 +84,17 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
         else:
             im = data
 
-        # plt.figure('real_image')
-        # plt.imshow(im[0][0].cpu().numpy(), cmap='gray')
-
-        # plt.figure('kepoints_mask')
-        # mask_im = cond_input['image'][0][0].cpu().numpy()
-        # for i in range(1,6):
-        #     mask_im += cond_input['image'][0][i].cpu().numpy()
-        # plt.imshow(mask_im, cmap='jet')
-
-        # plt.figure('null_mask')
-        # plt.imshow(uncond_input[key][0][0].cpu().numpy(), cmap='jet')
-        # plt.show()
 
         xt = torch.randn((im.shape[0],
                       autoencoder_model_config['z_channels'],
                       im_size_h,
                       im_size_w)).to(device)
 
-
         if 'text' in condition_types:
             text_condition_input = cond_input['text'].to(device)
             text_embedding = get_text_embeddeing(text_condition_input, regression_model, device).to(device)
             cond_input['text'] = text_embedding
-        print(cond_input[key].shape)
-
-        # plt the first image
-        # plt.imshow(cond_input[key][0][0].cpu().numpy())
-        # plt.show()
+        logging.info(cond_input[key].shape)
         
         ################# Sampling Loop ########################
         for i in reversed(range(diffusion_config['num_timesteps'])):
@@ -148,26 +122,6 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
                 else:
                     print('unconditional ldm')
                     noise_pred = model(xt, t)
-            # if i%100 == 0:
-            #     plt.figure(f'noise_pred_cond_{i}')
-            #     plt.imshow(noise_pred_cond[0][0].cpu().numpy())
-
-            #     plt.figure(f'noise_pred_uncond{i}')
-            #     plt.imshow(noise_pred_uncond[0][0].cpu().numpy())
-
-            #     plt.figure(f'pred_diff_{i}')
-            #     plt.imshow(noise_pred_cond[0][0].cpu().numpy() - noise_pred_uncond[0][0].cpu().numpy())
-            #     plt.show()
-
-            ## sampling the noise for the conditional and unconditional model
-            # noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
-            # plt.figure('noise_pred')
-            # plt.imshow(noise_pred[0][0].cpu().numpy())
-
-            # plt.figure('noise_pred_diff')
-            # plt.imshow(noise_pred[0][0].cpu().numpy() - noise_pred_cond[0][0].cpu().numpy())
-            # plt.show()
-
             
             # Use scheduler to get x0 and xt-1
             xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
@@ -191,58 +145,6 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
         for i in range(ims.shape[0]):
             cv2.imwrite(os.path.join(save_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
 
-
-    ###### OLD PART - SAVE THE SAMPLE PROCESS OF LATENT SPACE FOR SINGLE IMAGE ###########
-    if False: 
-        ########### Sample random noise latent ##########
-        # For now fixing generation with one sample
-        xt = torch.randn((1,
-                        autoencoder_model_config['z_channels'],
-                        im_size,
-                        im_size)).to(device)
-        ###############################################
-
-        mask_idx = random.randint(0, len(data_img))
-        mask = data_img[0][1]['image'].unsqueeze(0).to(device)
-
-        uncond_input = {
-            # 'text': empty_text_embed,
-            'image': torch.zeros_like(mask)
-        }
-        cond_input = {
-            # 'text': text_prompt_embed,
-            'image': mask
-        }
-        # ###############################################
-
-        ################# Sampling Loop ########################
-        for i in reversed(range(diffusion_config['num_timesteps'])):
-            # Get prediction of noise
-            t = (torch.ones((xt.shape[0],)) * i).long().to(device)
-            noise_pred_cond = model(xt, t, cond_input)
-            noise_pred_uncond = model(xt, t, uncond_input)
-
-            
-            noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
-            
-            # Use scheduler to get x0 and xt-1
-            xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
-            
-            # Save x0
-            if i == 0:
-                # Decode ONLY the final image to save time
-                ims = vae.decode(xt)
-            else:
-                ims = x0_pred
-            
-            ims = torch.clamp(ims, -1., 1.).detach().cpu()
-            ims = (ims + 1) / 2
-            grid = make_grid(ims, nrow=10)
-            img = torchvision.transforms.ToPILImage()(grid)
-            
-            img.save(os.path.join(save_folder, 'x0_{}.png'.format(i)))
-            img.close()
-        #############################################################
 
 def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm):
     # Read the config file #
@@ -286,26 +188,18 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm):
     # ...
     ###############################################
     
-    ########## Load Unet #############
-    # model = Unet(im_channels=autoencoder_model_config['z_channels'], model_config=diffusion_model_config).to(device)
-    # model.eval()
-    # model_dir = os.path.join(par_dir, dataset_config['name'], trial, experiment)
-    # model.load_state_dict(torch.load(os.path.join(model_dir, f'ldm_{epoch}.pth'),map_location=device), strict=False)
-   
-    #####################################
-    
     ########## Load AUTOENCODER #############
-    trial_folder = os.path.join(par_dir, dataset_config['name'], trial)
+    trial_folder = os.path.join(par_dir, trial)
     assert os.listdir(trial_folder), f'No trained model found in trial folder {trial_folder}'
-    print(os.listdir(trial_folder))
+    logging.info(os.listdir(trial_folder))
 
     if 'cond_vae' in os.listdir(trial_folder):
         ## Condition VAE + LDM
         type_model = 'cond_vae'
-        print(f'type model {type_model}')
-        print(f'Load trained {os.listdir(trial_folder)[0]} model')
+        logging.info(f'type model {type_model}')
+        logging.info(f'Load trained {os.listdir(trial_folder)[0]} model')
         best_model = get_best_model(os.path.join(trial_folder,'cond_vae'))
-        print(f'best model  epoch {best_model}')
+        logging.info(f'best model  epoch {best_model}\n')
         vae = condVAE(im_channels=dataset_config['im_channels'], model_config=autoencoder_model_config, condition_config=condition_config).to(device)
         vae.eval()
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'cond_vae', f'vae_best_{best_model}.pth'), map_location=device))
@@ -315,23 +209,23 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm):
             ## conditional ldm
             model = unet_cond_base.Unet(im_channels=autoencoder_model_config['z_channels'], model_config=diffusion_model_config).to(device)
             model.eval()
-            model_dir = os.path.join(par_dir, dataset_config['name'], trial, experiment)
+            model_dir = os.path.join(par_dir, trial, experiment)
             model.load_state_dict(torch.load(os.path.join(model_dir, f'ldm_{epoch}.pth'),map_location=device), strict=False)
         
         else:
             ## unconditional ldm
             model = unet_base.Unet(im_channels=autoencoder_model_config['z_channels'], model_config=diffusion_model_config).to(device)
             model.eval()
-            model_dir = os.path.join(par_dir, dataset_config['name'], trial, experiment)
+            model_dir = os.path.join(par_dir, trial, experiment)
             model.load_state_dict(torch.load(os.path.join(model_dir, f'ldm_{epoch}.pth'),map_location=device), strict=False)
 
     if 'vae' in os.listdir(trial_folder):
         ## VAE + conditional LDM
         type_model = 'vae'
-        print(f'type model {type_model}')
-        print(f'Load trained {os.listdir(trial_folder)[0]} model')
+        logging.info(f'type model {type_model}')
+        logging.info(f'Load trained {os.listdir(trial_folder)[0]} model')
         best_model = get_best_model(os.path.join(trial_folder,'vae'))
-        print(f'best model  epoch {best_model}')
+        logging.info(f'best model  epoch {best_model}')
         vae = VAE(im_channels=dataset_config['im_channels'], model_config=autoencoder_model_config).to(device)
         vae.eval()
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vae', f'vae_best_{best_model}.pth'), map_location=device))
@@ -339,11 +233,11 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm):
         # conditional ldm
         model = unet_cond_base.Unet(im_channels=autoencoder_model_config['z_channels'], model_config=diffusion_model_config).to(device)
         model.eval()
-        model_dir = os.path.join(par_dir, dataset_config['name'], trial, experiment)
+        model_dir = os.path.join(par_dir, trial, experiment)
         model.load_state_dict(torch.load(os.path.join(model_dir, f'ldm_{epoch}.pth'),map_location=device), strict=False)
 
     if 'vqvae' in os.listdir(trial_folder):
-        print(f'Load trained {os.listdir(trial_folder)[0]} model')
+        logging.info(f'Load trained {os.listdir(trial_folder)[0]} model')
         vae = VQVAE(im_channels=dataset_config['im_channels'], model_config=autoencoder_model_config).to(device)
         vae.eval()
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vqvae', 'vqvae.pth'),map_location=device))
@@ -377,11 +271,14 @@ if __name__ == '__main__':
                                                                      Default=False that means
                                                                      'cond_vae' -> cond VAE + unconditional LDM
                                                                      'vae' -> VAE + conditional LDM""")
-
-    
+    parser.add_argument('--log', type=str, default='debug', help='Logging level')
     args = parser.parse_args()
 
-    experiment_dir = os.path.join(args.save_folder, 'eco', args.trial, args.experiment)
+    ## set the logger
+    logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
+    logging.basicConfig(level=logging_dict[args.log])
+
+    experiment_dir = os.path.join(args.save_folder, args.trial, args.experiment)
     config = os.path.join(experiment_dir, 'config.yaml')
 
     infer(par_dir = args.save_folder, conf=config, trial=args.trial, experiment=args.experiment ,epoch=args.epoch, guide_w=args.guide_w, activate_cond_ldm=args.cond_ldm)

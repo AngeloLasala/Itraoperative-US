@@ -214,7 +214,7 @@ class IntraoperativeUS():
         label = resize(label)
 
         ## convert to tensor and normalize
-        label = torch.tensor(label)
+        label = transforms.functional.to_tensor(label)
         image = transforms.functional.to_tensor(image)
         image = (2 * image) - 1    
         return image, label
@@ -235,21 +235,21 @@ if __name__ == '__main__':
     dataset = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
                                im_channels= dataset_config['im_channels'], 
-                               split='train',
+                               split='val',
                                splitting_seed=dataset_config['splitting_seed'],
                                train_percentage=dataset_config['train_percentage'],
                                val_percentage=dataset_config['val_percentage'],
                                test_percentage=dataset_config['test_percentage'],
-                               condition_config=config['autoencoder_params']['condition_config'],
-                               data_augmentation=True)
+                               condition_config=config['ldm_params']['condition_config'],
+                               data_augmentation=False)
                             
-    # im, lab = dataset[100]
-    # print(im, lab)
+    im, lab = dataset[0]
+    print(im, lab)
 
-    # ## convert in numpy and plot the image
-    # im = im.numpy().transpose(1,2,0)
-    # lab = lab['image'].numpy().transpose(1,2,0)
-    # plt.imshow(im, cmap='gray')
-    # # plt.imshow(lab, cmap='jet', alpha=0.5)
-    # plt.show()
+    # convert in numpy and plot the image
+    im = im.numpy().transpose(1,2,0)
+    lab = lab['image'].numpy().transpose(1,2,0)
+    plt.imshow(im, cmap='gray')
+    plt.imshow(lab, cmap='jet', alpha=0.5)
+    plt.show()
 
