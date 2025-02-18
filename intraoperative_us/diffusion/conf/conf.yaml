@@ -89,7 +89,7 @@ train_params:
   commitment_beta: 0.2
   perceptual_weight: 1
   kl_weight: 0.000005
-  ldm_epochs : 3000
+  ldm_epochs : 1500
   autoencoder_epochs : 100
   num_samples : 25
   num_grid_rows : 5

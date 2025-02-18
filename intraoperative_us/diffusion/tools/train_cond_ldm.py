@@ -168,8 +168,8 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
     # Run training
     logging.info('Start training ...')
     for epoch_idx in range(num_epochs):
-        progress_bar = tqdm(total=len(data_loader), disable=False)
-        progress_bar.set_description(f"Epoch {epoch_idx + 1}/{num_epochs}")
+        # progress_bar = tqdm(total=len(data_loader), disable=False)
+        # progress_bar.set_description(f"Epoch {epoch_idx + 1}/{num_epochs}")
 
         time_start = time.time()
         losses = []
@@ -232,9 +232,9 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
             loss.backward()
             optimizer.step()
 
-            progress_bar.update(1)
-            logs = {"loss": loss.detach().item()}
-            progress_bar.set_postfix(**logs)
+            # progress_bar.update(1)
+            # logs = {"loss": loss.detach().item()}
+            # progress_bar.set_postfix(**logs)
         # end of the epoch
         
         ## Validation - computation of the FID score between real images (train) and generated images (validation)
