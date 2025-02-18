@@ -242,7 +242,8 @@ if __name__ == '__main__':
                                test_percentage=dataset_config['test_percentage'],
                                condition_config=config['ldm_params']['condition_config'],
                                data_augmentation=False)
-                            
+
+    print(dataset.splitting_dict)                            
     im, lab = dataset[0]
     print(im, lab)
 
