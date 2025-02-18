@@ -242,7 +242,7 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
         # Generated images: from the dataset loader of the validation set on wich i apply the diffusion and the decoder
         time_end = time.time()
         total_time = time_end - time_start
-        logging.info(f'Finished epoch:{epoch_idx+1} | Loss : {np.mean(losses):.4f} | Time: {total_time:.4f} sec')
+        print(f'Finished epoch:{epoch_idx+1} | Loss : {np.mean(losses):.4f} | Time: {total_time:.4f} sec')
 
         # Save the model
         if (epoch_idx+1) % train_config['save_frequency'] == 0:
