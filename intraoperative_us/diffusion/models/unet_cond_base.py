@@ -6,6 +6,7 @@ from einops import einsum
 import torch.nn as nn
 from intraoperative_us.diffusion.models.blocks import get_time_embedding
 from intraoperative_us.diffusion.models.blocks import DownBlock, MidBlock, UpBlockUnet
+from intraoperative_us.diffusion.utils.utils import get_numer_parameter
 # from utils.config_utils import *
 
 def get_config_value(config, key, default_value):
@@ -228,4 +229,5 @@ if __name__ == '__main__':
     keypoints_cond = torch.randn(5, 12)
     eco_parameters_cond = torch.randn(5, 2)
     out = model(x, t, {'image': mask_cond})
+    get_numer_parameter(model)
     print(out.shape)
