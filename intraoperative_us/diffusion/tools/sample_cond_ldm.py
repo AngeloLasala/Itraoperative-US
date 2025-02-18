@@ -55,7 +55,7 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
     data_img = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
                                im_channels= dataset_config['im_channels'], 
-                               split='train',
+                               split='val',
                                splitting_seed=dataset_config['splitting_seed'],
                                train_percentage=dataset_config['train_percentage'],
                                val_percentage=dataset_config['val_percentage'],
@@ -83,8 +83,7 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
                 uncond_input[key] = torch.zeros_like(cond_input[key])
         else:
             im = data
-
-
+    
         xt = torch.randn((im.shape[0],
                       autoencoder_model_config['z_channels'],
                       im_size_h,
