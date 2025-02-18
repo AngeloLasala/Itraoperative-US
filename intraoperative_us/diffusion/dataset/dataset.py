@@ -1,5 +1,7 @@
 import glob
 import os
+import yaml
+
 
 import torchvision
 from PIL import Image
@@ -221,9 +223,10 @@ class IntraoperativeUS():
 
 
 if __name__ == '__main__':
-    import yaml
-    
-    conf = '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/conf/conf.yaml'
+    current_directory = os.path.dirname(__file__)
+    par_dir = os.path.dirname(current_directory)
+    conf = os.path.join(par_dir, 'conf', f'conf.yaml')
+
     with open(conf, 'r') as file:
         try:
             config = yaml.safe_load(file)
