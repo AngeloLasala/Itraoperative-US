@@ -54,7 +54,8 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
     ## load validation dataset
     data_img = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
-                               im_channels= dataset_config['im_channels'], 
+                               im_channels= dataset_config['im_channels'],
+                               splitting_json=dataset_config['splitting_json'], 
                                split='val',
                                splitting_seed=dataset_config['splitting_seed'],
                                train_percentage=dataset_config['train_percentage'],

@@ -43,6 +43,7 @@ class IntraoperativeUS():
     """
     def __init__(self, size, dataset_path, im_channels, split,
                  splitting_seed, train_percentage, val_percentage, test_percentage,
+                 splitting_json=None,
                  condition_config=None, data_augmentation=False):
 
         self.dataset_path = dataset_path
@@ -63,7 +64,11 @@ class IntraoperativeUS():
 
         ## get the splitting of the dataset
         self.split = split
-        self.splitting_dict = self.get_data_splittings()
+        if splitting_json is None:
+            self.splitting_dict = self.get_data_splittings()
+        else:
+            with open(os.path.join(os.path.dirname(self.dataset_path), splitting_json), 'r') as file:
+                self.splitting_dict = json.load(file)
         self.subjects_files = self.splitting_dict[self.split]
 
         ## image and label list
@@ -238,6 +243,7 @@ if __name__ == '__main__':
     dataset = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
                                im_channels= dataset_config['im_channels'], 
+                               splitting_json=dataset_config['splitting_json'],
                                split='val',
                                splitting_seed=dataset_config['splitting_seed'],
                                train_percentage=dataset_config['train_percentage'],
@@ -247,7 +253,7 @@ if __name__ == '__main__':
                                data_augmentation=False)
 
     print(dataset.splitting_dict)                            
-    im, lab = dataset[0]
+    im, lab = dataset[10]
     print(im, lab)
 
     # convert in numpy and plot the image
