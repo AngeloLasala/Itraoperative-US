@@ -1,6 +1,6 @@
 einops==0.8.1
 matplotlib==3.10.0
-opencv_python==4.11
+opencv_python==4.11.0.86
 pandas==2.2.3
 Pillow==11.1.0
 PyYAML==6.0.2
