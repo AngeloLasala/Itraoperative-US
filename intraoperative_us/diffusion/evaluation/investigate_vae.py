@@ -25,6 +25,13 @@ from intraoperative_us.diffusion.models.vae import VAE
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+def get_config_value(config, key, default_value):
+    """
+    Get the value of a key from the config dictionary
+    """
+    return config[key] if key in config else default_value
+
+
 def get_best_model(trial_folder):
     """
     Get the best model from the trial folder
