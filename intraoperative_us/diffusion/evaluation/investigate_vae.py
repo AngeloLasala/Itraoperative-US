@@ -149,7 +149,8 @@ def infer(par_dir, conf, trial, show_plot=False):
     # Create the dataset and dataloader
     data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
-                               im_channels= dataset_config['im_channels'], 
+                               im_channels= dataset_config['im_channels'],
+                               splitting_json=dataset_config['splitting_json'], 
                                split='train',
                                splitting_seed=dataset_config['splitting_seed'],
                                train_percentage=dataset_config['train_percentage'],
@@ -260,12 +261,12 @@ def infer(par_dir, conf, trial, show_plot=False):
     plt.yticks(fontsize=18)
 
     ## plt the 2d scatter plot of tsne
-    plt.figure(figsize=(8,8), num=f'{type_model} - TSNE of latent space of PLAX')
-    plt.scatter(encoded_output_tsne[:,0], encoded_output_tsne[:,1])
-    plt.xlabel('TSNE 1', fontsize=20)
-    plt.ylabel('TSNE 2', fontsize=20)
-    plt.xticks(fontsize=18)
-    plt.yticks(fontsize=18)
+    plt.figure(figsize=(10,10), num=f'{type_model} - TSNE of latent space of PLAX')
+    plt.scatter(encoded_output_tsne[:,0], encoded_output_tsne[:,1], color='blue', s=40)
+    plt.xlabel('TSNE 1', fontsize=22)
+    plt.ylabel('TSNE 2', fontsize=22)
+    plt.xticks(fontsize=20)
+    plt.yticks(fontsize=20)
     plt.show()
 
 
