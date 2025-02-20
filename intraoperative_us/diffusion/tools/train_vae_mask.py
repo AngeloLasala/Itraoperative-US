@@ -286,6 +286,7 @@ if __name__ == '__main__':
     ## set the logger
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
+    print(f'Am I using GPU: {torch.cuda.is_available()}')
 
     current_directory = os.path.dirname(__file__)
     par_dir = os.path.dirname(current_directory)
