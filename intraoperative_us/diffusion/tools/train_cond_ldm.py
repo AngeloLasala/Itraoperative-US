@@ -277,5 +277,5 @@ if __name__ == '__main__':
     # save_folder = os.path.join(args.save_folder, args.trial)
     train(par_dir = par_dir,
         conf = configuration, 
-        trial = os.path.join(args.save_folder, args.trial),
+        trial = os.path.join(args.save_folder, 'ius', args.trial),
         activate_cond_ldm=args.cond_ldm)
