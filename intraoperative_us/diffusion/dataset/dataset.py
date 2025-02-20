@@ -152,9 +152,6 @@ class IntraoperativeUS():
                 image_label_dict['image'].append(os.path.join(subject_path, 'volume', item))
                 image_label_dict['tumor'].append(os.path.join(subject_path, 'tumor', item))
                 
-        ## check the leng of the list
-        assert len(image_label_dict['image']) == len(image_label_dict['tumor']), 'The number of images and labels are different'
-
         return image_label_dict
 
     def augmentation(self, image, label=None):
@@ -226,6 +223,148 @@ class IntraoperativeUS():
         image = (2 * image) - 1    
         return image, label
 
+class IntraoperativeUS_mask():
+    """
+    IntraoperativeUS dataset class for developing DL model for neurosurgical US images
+
+    Load only mask for generating the mask for the tumor
+    """
+    def __init__(self, size, dataset_path, im_channels, split,
+                 splitting_seed, train_percentage, val_percentage, test_percentage,
+                 splitting_json=None,
+                 data_augmentation=False):
+
+        self.dataset_path = dataset_path
+
+        # condition and data augmentation parameters
+        self.data_augmentation = data_augmentation
+        
+        #img parameters
+        self.size = size
+        self.im_channels = im_channels
+
+        #splitting parameters   
+        self.splitting_seed = splitting_seed
+        self.train_percentage = train_percentage
+        self.val_percentage = val_percentage
+        self.test_percentage = test_percentage
+
+        ## get the splitting of the dataset
+        self.split = split
+        if splitting_json is None:
+            self.splitting_dict = self.get_data_splittings()
+        else:
+            with open(os.path.join(os.path.dirname(self.dataset_path), splitting_json), 'r') as file:
+                self.splitting_dict = json.load(file)
+        self.subjects_files = self.splitting_dict[self.split]
+
+        ## image and label list
+        self.label_list = self.get_label_list()
+
+    def __len__(self):
+        return len(self.label_list)
+
+
+    def __getitem__(self, index):
+        label = self.get_label(index)
+
+            
+        if self.data_augmentation:
+            label_tensor = self.augmentation(label)
+        else:
+            label_tensor = self.trasform(label)
+        
+        return label_tensor
+
+       
+
+    def get_label(self, index):
+        """
+        Return the image and label given the index
+        """
+        # read image and label with PIL
+        label = Image.open(self.label_list[index])
+        return label
+
+    def get_data_splittings(self):
+        """
+        Given the path of the dataset return the list of patient for train, valindation and test
+        """
+        np.random.seed(self.splitting_seed)
+        
+        subjects = os.listdir(self.dataset_path)
+        np.random.shuffle(subjects)
+
+        n_test = math.floor(len(subjects) * self.test_percentage) 
+        n_val = math.floor(len(subjects) * self.val_percentage)
+        n_train = math.floor(len(subjects) * self.train_percentage) + 1  ## floor(18.4) = 18 so i add 1
+
+        train = subjects[:n_train]
+        val = subjects[n_train:n_train+n_val]
+        test = subjects[n_train+n_val:]
+        splitting_dict = {'train': train, 'val': val, 'test': test}
+
+        return splitting_dict
+
+    def get_label_list(self):
+        """
+        From the list of patient in self.subjects_files return the list of image and tumor
+
+        ** TO DO: extended for the sulci and falx **
+        """
+        tumor_list = []
+        for subject in self.subjects_files:
+            subject_path = os.path.join(self.dataset_path, subject)
+            for item in os.listdir(os.path.join(self.dataset_path, subject, 'tumor')):
+                tumor_list.append(os.path.join(subject_path, 'tumor', item))
+                
+        return tumor_list
+
+    def augmentation(self, label):
+        """
+        Set of trasformation to apply to image.
+        """
+        ## Resize
+        resize = transforms.Resize(size=self.size)
+        label = resize(label)
+        
+        ## random rotation to image and label
+        if torch.rand(1) > 0.5:
+            angle = np.random.randint(-30, 30)
+            label = transforms.functional.rotate(label, angle)
+
+        ## random translation to image and label in each direction
+        if torch.rand(1) > 0.5:
+            translate = transforms.RandomAffine.get_params(degrees=(0.,0.), 
+                                                        translate=(0.10, 0.10),
+                                                        scale_ranges=(1.0,1.0),
+                                                        shears=(0.,0.), 
+                                                        img_size=self.size)
+            label = transforms.functional.affine(label, *translate)
+
+        ## random horizontal flip
+        if torch.rand(1) > 0.5:
+            label = transforms.functional.hflip(label)
+
+        ## random vertical flip
+        if torch.rand(1) > 0.5:
+            label = transforms.functional.vflip(label)
+     
+        label = transforms.functional.to_tensor(label)
+        
+        return label
+
+    def trasform(self, label):
+        """
+        Simple trasformaztion of the label and image. Resize and normalize the image and resize the label
+        """
+        ## Resize
+        resize = transforms.Resize(size=self.size)
+        label = resize(label)
+
+        ## convert to tensor and normalize
+        label = transforms.functional.to_tensor(label)  
+        return label
 
 if __name__ == '__main__':
     current_directory = os.path.dirname(__file__)

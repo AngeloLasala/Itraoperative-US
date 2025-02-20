@@ -14,7 +14,7 @@ from intraoperative_us.diffusion.models.vae import VAE
 from intraoperative_us.diffusion.models.lpips import LPIPS
 from intraoperative_us.diffusion.models.discriminator import Discriminator
 from torch.utils.data.dataloader import DataLoader
-from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
+from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS_mask
 from torch.optim import Adam
 import matplotlib.pyplot as plt
 import time
@@ -48,7 +48,7 @@ def train(conf, save_folder):
     model = VAE(im_channels=dataset_config['im_channels'],
                   model_config=autoencoder_config).to(device)
 
-    data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+    data = IntraoperativeUS_mask(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                             dataset_path= dataset_config['dataset_path'],
                             im_channels= dataset_config['im_channels'], 
                             splitting_json=dataset_config['splitting_json'],
@@ -57,9 +57,8 @@ def train(conf, save_folder):
                             train_percentage=dataset_config['train_percentage'],
                             val_percentage=dataset_config['val_percentage'],
                             test_percentage=dataset_config['test_percentage'],
-                            condition_config=config['autoencoder_params']['condition_config'],
                             data_augmentation=True)
-    val_data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+    val_data = IntraoperativeUS_mask(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
                                im_channels= dataset_config['im_channels'], 
                                splitting_json=dataset_config['splitting_json'],
@@ -68,14 +67,12 @@ def train(conf, save_folder):
                                train_percentage=dataset_config['train_percentage'],
                                val_percentage=dataset_config['val_percentage'],
                                test_percentage=dataset_config['test_percentage'],
-                               condition_config=config['autoencoder_params']['condition_config'],
                                data_augmentation=False)
 
     logging.info(f'len data {len(data)} - len val_data {len(val_data)}')
     
     data_loader = DataLoader(data, batch_size=train_config['autoencoder_batch_size'], shuffle=True, num_workers=4, timeout=10)
     val_data_loader = DataLoader(val_data, batch_size=train_config['autoencoder_batch_size'], shuffle=True, num_workers=4, timeout=10)
-
 
     # generate save folder
     save_dir = os.path.join(save_folder,'mask')
@@ -125,11 +122,9 @@ def train(conf, save_folder):
         optimizer_g.zero_grad()
         optimizer_d.zero_grad()
         
-        for data in tqdm(data_loader): #  avoid tqdm for cluster tqdm(data_loader):
+        for im in tqdm(data_loader): #  avoid tqdm for cluster tqdm(data_loader):
             step_count += 1
-            _, im = data   ## im is the mask now
-            for key in im.keys(): ## for all the type of condition, we move the  tensor on the device
-                im = im[key].to(device)
+            im = im.float().to(device)
 
             #########################  Generator ################################
             model_output = model(im)
@@ -139,9 +134,8 @@ def train(conf, save_folder):
             # Image Saving Logic
             if step_count % image_save_steps == 0 or step_count == 1:
                 sample_size = min(8, im.shape[0])
-                save_output = torch.clamp(output[:sample_size], -1., 1.).detach().cpu()
-                save_output = ((save_output + 1) / 2)
-                save_input = ((im[:sample_size] + 1) / 2).detach().cpu()
+                save_output = torch.clamp(output[:sample_size], 0., 1.).detach().cpu()
+                save_input = (im[:sample_size] ).detach().cpu()
 
                 grid = make_grid(torch.cat([save_input, save_output], dim=0), nrow=sample_size)
                 img = torchvision.transforms.ToPILImage()(grid)
@@ -197,10 +191,8 @@ def train(conf, save_folder):
         with torch.no_grad():
             val_recon_losses = []
             val_perceptual_losses = []
-            for data in val_data_loader: #tqdm(val_data_loader): delate tqdm for cluster
-                _, im = data
-                for key in im.keys():
-                    im = im[key].float().to(device)
+            for im in val_data_loader: #tqdm(val_data_loader): delate tqdm for cluster
+                im = im.float().to(device)
                 
                 model_output = model(im)
                 output, encoder_out = model_output
