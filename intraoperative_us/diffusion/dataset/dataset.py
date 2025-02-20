@@ -41,10 +41,11 @@ class IntraoperativeUS():
     ├── Case3-US-before
     └── Case4-US-before
     """
-    def __init__(self, size, dataset_path, im_channels, split,
+    def __init__(self, size, dataset_path, im_channels, split, 
                  splitting_seed, train_percentage, val_percentage, test_percentage,
                  splitting_json=None,
-                 condition_config=None, data_augmentation=False):
+                 condition_config=None, data_augmentation=False,
+                 rgb=False):
 
         self.dataset_path = dataset_path
 
@@ -55,6 +56,7 @@ class IntraoperativeUS():
         #img parameters
         self.size = size
         self.im_channels = im_channels
+        self.rgb = rgb
 
         #splitting parameters   
         self.splitting_seed = splitting_seed
@@ -115,6 +117,9 @@ class IntraoperativeUS():
         """
         # read image and label with PIL
         im = Image.open(self.image_list[index])
+        if self.rgb:
+            im = im.convert('RGB')
+
         label = Image.open(self.label_list[index])
         subject = self.image_list[index].split('/')[-1].split('.')[0]
         return im, label, subject
@@ -232,7 +237,8 @@ class IntraoperativeUS_mask():
     def __init__(self, size, dataset_path, im_channels, split,
                  splitting_seed, train_percentage, val_percentage, test_percentage,
                  splitting_json=None,
-                 data_augmentation=False):
+                 data_augmentation=False,
+                 condition_config=None):
 
         self.dataset_path = dataset_path
 

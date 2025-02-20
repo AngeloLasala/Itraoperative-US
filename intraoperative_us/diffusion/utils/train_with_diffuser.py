@@ -18,7 +18,14 @@ from tqdm.auto import tqdm
 from pathlib import Path
 import os
 
-import glob
+
+import yaml
+import torch
+import os
+import json
+from torch.utils.data.dataloader import DataLoader
+from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
+
 
 
 
@@ -34,7 +41,7 @@ class TrainingConfig:
     save_image_epochs: int = 10
     save_model_epochs: int = 30
     mixed_precision: str = 'fp16'             # `no` for float32, `fp16` for automatic mixed precision
-    output_dir: str = 'ddpm-butterflies-128'  # the model name locally and on the HF Hub
+    output_dir: str = 'ius'  # the model name locally and on the HF Hub
 
     push_to_hub: bool = False                  # whether to upload the saved model to the HF Hub
     hub_private_repo: bool = False  
@@ -66,38 +73,68 @@ def evaluate(config, epoch, pipeline):
 
 config = TrainingConfig()
 
-## load dataset - butterflay one
+## load dataset - ius
 config.dataset_name = "huggan/smithsonian_butterflies_subset"
 dataset = load_dataset(config.dataset_name, split="train")
 
-fig, axs = plt.subplots(1, 4, figsize=(16, 4))
-for i, image in enumerate(dataset[:4]["image"]):
-    axs[i].imshow(image)
-    axs[i].set_axis_off()
+configuration = "/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/conf/conf.yaml"
+with open(configuration, 'r') as file:
+        try:
+            configuration = yaml.safe_load(file)
+        except yaml.YAMLError as exc:
+            logging.warning(exc)
+# print(config)
+dataset_config = configuration['dataset_params']
+autoencoder_config = configuration['autoencoder_params']
+train_config = configuration['train_params']
+
+data = IntraoperativeUS(size= [config.image_size, config.image_size],
+                            dataset_path= dataset_config['dataset_path'],
+                            im_channels= dataset_config['im_channels'], 
+                            splitting_json=dataset_config['splitting_json'],
+                            split='train',
+                            splitting_seed=dataset_config['splitting_seed'],
+                            train_percentage=dataset_config['train_percentage'],
+                            val_percentage=dataset_config['val_percentage'],
+                            test_percentage=dataset_config['test_percentage'],
+                            condition_config=configuration['autoencoder_params']['condition_config'],
+                            data_augmentation=False,
+                            rgb=True)
+print(dataset)
+# print(data)
+# fig, axs = plt.subplots(1, 4, figsize=(16, 4))
+# for i, image in enumerate(dataset[:4]["image"]):
+#     axs[i].imshow(image)
+#     axs[i].set_axis_off()
 
 ## prepocess the dataset
-preprocess = transforms.Compose(
-    [
-        transforms.Resize((config.image_size, config.image_size)),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize([0.5], [0.5]),
-    ]
-)
+# preprocess = transforms.Compose(
+#     [
+#         transforms.Resize((config.image_size, config.image_size)),
+#         transforms.RandomHorizontalFlip(),
+#         transforms.ToTensor(),
+#         transforms.Normalize([0.5], [0.5]),
+#     ]
+# )
 
-def transform(examples):
-    images = [preprocess(image.convert("RGB")) for image in examples["image"]]
-    return {"images": images}
+# def transform(examples):
+#     images = [preprocess(image.convert("RGB")) for image in examples["image"]]
+#     return {"images": images}
 
-dataset.set_transform(transform)
-fig, axs = plt.subplots(1, 4, figsize=(16, 4))
-for i, image in enumerate(dataset[:4]["images"]):
-    axs[i].imshow(image.permute(1, 2, 0).numpy() / 2 + 0.5)
-    axs[i].set_axis_off()
+# dataset.set_transform(transform)
+# fig, axs = plt.subplots(1, 4, figsize=(16, 4))
+# for i, image in enumerate(dataset[:4]["images"]):
+#     axs[i].imshow(image.permute(1, 2, 0).numpy() / 2 + 0.5)
+#     axs[i].set_axis_off()
 
 
-## data loader
-train_dataloader = torch.utils.data.DataLoader(dataset, batch_size=config.train_batch_size, shuffle=True)
+# ## data loader
+# train_dataloader = torch.utils.data.DataLoader(dataset, batch_size=config.train_batch_size, shuffle=True)
+train_dataloader = torch.utils.data.DataLoader(data, batch_size=config.train_batch_size, shuffle=True)
+
+for i in train_dataloader:
+    print(i.shape)    
+    break
 
 ## model
 model = UNet2DModel(
@@ -127,13 +164,12 @@ model = UNet2DModel(
 ##  SCHEDULER with example
 noise_scheduler = DDPMScheduler(num_train_timesteps=1000)
 
-sample_image = dataset[0]['images'].unsqueeze(0)
+sample_image = data[0].unsqueeze(0)
 noise = torch.randn(sample_image.shape)
 timesteps = torch.LongTensor([100])
 noisy_image = noise_scheduler.add_noise(sample_image, noise, timesteps)
 plt.figure()
 plt.imshow(noisy_image[0].permute(1, 2, 0).numpy() / 2 + 0.5)
-
 ## IINITIALIZATION OF THE TRAINING
 
 noise_pred = model(noisy_image, timesteps).sample
@@ -173,7 +209,7 @@ def train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_s
         progress_bar.set_description(f"Epoch {epoch}")
 
         for step, batch in enumerate(train_dataloader):
-            clean_images = batch['images']
+            clean_images = batch
             # Sample noise to add to the images
             noise = torch.randn(clean_images.shape).to(clean_images.device)
             bs = clean_images.shape[0]
@@ -203,8 +239,7 @@ def train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_s
             global_step += 1
 
         # After each epoch you optionally sample some demo images with evaluate() and save the model
-        if accelerator.is_main_process:
-            print("sono dentrooooooooooooo")
+        if accelerator.is_main_process and epoch % config.save_model_epochs == 0:
             pipeline = DDPMPipeline(unet=accelerator.unwrap_model(model), scheduler=noise_scheduler)
             evaluate(config, epoch, pipeline)
 
