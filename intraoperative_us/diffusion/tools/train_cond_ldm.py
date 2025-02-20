@@ -22,9 +22,9 @@ import multiprocessing as mp
 import time
 import logging
 
-mp.set_start_method('spawn', force=True)
+# mp.set_start_method('spawn', force=True)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-torch.cuda.empty_cache()
+# torch.cuda.empty_cache()
 
 def drop_image_condition(image_condition, im, im_drop_prob):
     if im_drop_prob > 0:
