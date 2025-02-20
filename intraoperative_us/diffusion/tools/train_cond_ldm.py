@@ -263,7 +263,7 @@ if __name__ == '__main__':
                                                                      Default=False that means
                                                                      'cond_vae' -> cond VAE + unconditional LDM
                                                                      'vae' -> VAE + conditional LDM""")
-    parser.add_argument('--log', type=str, default='debug', help='Logging level')
+    parser.add_argument('--log', type=str, default='warning', help='Logging level')
     args = parser.parse_args()
 
     ## set the logger
