@@ -9,4 +9,4 @@
 #SBATCH --output=gpu.out      # standard output file
 #SBATCH --account=IscrC_Med-LMGM     # account name
 
-python -m intraoperative_us.diffusion.tools.check_gpu
+python check_gpu
