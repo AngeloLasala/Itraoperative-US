@@ -9,7 +9,7 @@
 #SBATCH --output=vae_mask.out      # standard output file
 #SBATCH --account=IscrC_Med-LMGM     # account name
 
-python -m intraoperative_us.diffusion.tools.train_vae --conf conf_mask\
+python -m intraoperative_us.diffusion.tools.train_vae_mask --conf conf_mask\
                                                       --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
                                                       --log 'warning'
  

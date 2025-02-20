@@ -78,7 +78,7 @@ def train(conf, save_folder):
     val_data_loader = DataLoader(val_data, batch_size=train_config['autoencoder_batch_size'], shuffle=True, num_workers=4, timeout=10)
 
     # generate save folder
-    save_dir = save_folder
+    save_dir = os.path.join(save_folder, 'ius')
     if not os.path.exists(save_dir):
         save_dir = os.path.join(save_dir, 'trial_1', 'vae')
         os.makedirs(save_dir)
