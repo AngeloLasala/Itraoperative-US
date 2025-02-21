@@ -10,9 +10,6 @@ import numpy as np
 from tqdm import tqdm
 import json
 import yaml
-from intraoperative_us.diffusion.models.vae import VAE
-from intraoperative_us.diffusion.models.lpips import LPIPS
-from intraoperative_us.diffusion.models.discriminator import Discriminator
 from torch.utils.data.dataloader import DataLoader
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
 from torch.optim import Adam
@@ -20,6 +17,12 @@ import matplotlib.pyplot as plt
 import time
 import logging
 from torchvision.utils import make_grid
+
+from intraoperative_us.diffusion.models.vae import VAE
+from diffusers import AutoencoderKL
+from intraoperative_us.diffusion.models.lpips import LPIPS
+from intraoperative_us.diffusion.models.discriminator import Discriminator
+from intraoperative_us.diffusion.utils.utils import get_number_parameter
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -44,10 +47,48 @@ def train(conf, save_folder):
         torch.cuda.manual_seed_all(seed)
     #############################
 
-    # Create the model and dataset #
-    model = VAE(im_channels=dataset_config['im_channels'],
+    # Load Autoencoder model
+    autoencoder_type = autoencoder_config['autoencoder_type']
+    initialization = autoencoder_config['initialization']
+    if autoencoder_type == 'scratch':
+        logging.info('Training VAE from scratch')
+        model = VAE(im_channels=dataset_config['im_channels'],
                   model_config=autoencoder_config).to(device)
 
+    else:
+        if initialization == 'random':
+            ## random initialization
+            model = AutoencoderKL(
+                    in_channels=dataset_config['im_channels'],
+                    out_channels=dataset_config['im_channels'],
+                    sample_size=dataset_config['im_size_h'],
+                    block_out_channels=autoencoder_config['down_channels'],
+                    latent_channels=autoencoder_config.get('latent_channels', 4),  # Default is 4
+                    down_block_types=autoencoder_config.get('down_block_types', [
+                        "DownEncoderBlock2D",
+                        "DownEncoderBlock2D",
+                        "DownEncoderBlock2D",
+                        "DownEncoderBlock2D"
+                    ]),
+                    up_block_types=autoencoder_config.get('up_block_types', [
+                        "UpDecoderBlock2D",
+                        "UpDecoderBlock2D",
+                        "UpDecoderBlock2D",
+                        "UpDecoderBlock2D"
+                    ])
+                ).to(device)
+        else:
+            # pretrained weights
+            model = AutoencoderKL.from_pretrained(
+            autoencoder_config['autoencoder_type'],
+            in_channels=dataset_config['im_channels'],
+            out_channels=dataset_config['im_channels'],
+            sample_size=dataset_config['im_size_h'],
+            block_out_channels=autoencoder_config['down_channels'],
+            low_cpu_mem_usage=False,
+            ignore_mismatched_sizes=True).to(device)
+
+        
 
     data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
@@ -76,6 +117,21 @@ def train(conf, save_folder):
     
     data_loader = DataLoader(data, batch_size=train_config['autoencoder_batch_size'], shuffle=True, num_workers=4, timeout=10)
     val_data_loader = DataLoader(val_data, batch_size=train_config['autoencoder_batch_size'], shuffle=True, num_workers=4, timeout=10)
+
+    # get laten space from model for each image
+    for im in data_loader:
+        im = im.float().to(device)
+        model_output = model.encode(im).latent_dist.sample()  # Encode image
+        model_output = model_output * 0.18215
+        print(model_output.max(), model_output.min())
+        ## plot the latent space
+        plt.figure(figsize=(10, 10))
+        plt.imshow(im.cpu().detach().numpy()[0,0,:,:])
+        for i in range(4):
+            plt.figure(figsize=(10, 10))
+            plt.imshow(model_output.cpu().detach().numpy()[0,0,:,:])
+        plt.show()
+        break
 
     # generate save folder
     save_dir = os.path.join(save_folder, 'ius')
@@ -130,9 +186,16 @@ def train(conf, save_folder):
             im = im.float().to(device)
 
             #########################  Generator ################################
-            model_output = model(im)
-            output, encoder_out = model_output
-            mean, logvar = torch.chunk(encoder_out, 2, dim=1) 
+            if autoencoder_type == 'scratch':
+                model_output = model(im)
+                output, encoder_out = model_output
+                mean, logvar = torch.chunk(encoder_out, 2, dim=1)
+            else:
+                encoder_out = model.encode(im)  # Encode image
+                mean = encoder_out.latent_dist.mean  # Mean of latent space
+                logvar = encoder_out.latent_dist.logvar  # Log-variance
+                output = model.decode(model.encode(im).latent_dist.sample()).sample
+
 
             # Image Saving Logic
             if step_count % image_save_steps == 0 or step_count == 1:
@@ -197,9 +260,17 @@ def train(conf, save_folder):
             val_perceptual_losses = []
             for im in val_data_loader: #tqdm(val_data_loader): delate tqdm for cluster
                 im = im.float().to(device)
-                model_output = model(im)
-                output, encoder_out = model_output
-                mean, logvar = torch.chunk(encoder_out, 2, dim=1) 
+
+                if autoencoder_type == 'scratch':
+                    model_output = model(im)
+                    output, encoder_out = model_output
+                    mean, logvar = torch.chunk(encoder_out, 2, dim=1)
+                else:
+                    encoder_out = model.encode(im)  # Encode image
+                    mean = encoder_out.latent_dist.mean  # Mean of latent space
+                    logvar = encoder_out.latent_dist.logvar  # Log-variance
+                    output = model.decode(model.encode(im).latent_dist.sample()).sample
+                    
 
                 val_recon_loss = recon_criterion(output, im)
                 val_recon_losses.append(val_recon_loss.item())
@@ -283,9 +354,9 @@ def train(conf, save_folder):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train VAE on MNIST or CelebA-HQ')
-    parser.add_argument('--conf', type=str, default='mnist', help='yaml configuration file')  
+    parser.add_argument('--conf', type=str, default='conf', help='yaml configuration file')  
     parser.add_argument('--save_folder', type=str, default='trained_model', help='folder to save the model, default = trained_model')
-    parser.add_argument('--log', type=str, default='debug', help='Logging level')
+    parser.add_argument('--log', type=str, default='info', help='Logging level')
     args = parser.parse_args()
 
     ## set the logger
