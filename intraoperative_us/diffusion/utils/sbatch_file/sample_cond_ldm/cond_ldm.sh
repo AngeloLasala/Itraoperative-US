@@ -14,6 +14,7 @@ for trial in trial_3; do
         for epoch in 600 1200 1800 2400 3000 ; do
                 python -m intraoperative_us.diffusion.tools.sample_cond_ldm\
                         --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
+                        --generated_mask_dir "/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion/mask/trial_1/ldm_1/w_-1.0/samples_ep_3000"\
                         --trial $trial\
                         --experiment cond_ldm_3\
                         --epoch $epoch\
