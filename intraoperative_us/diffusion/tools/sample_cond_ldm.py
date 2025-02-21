@@ -274,6 +274,8 @@ if __name__ == '__main__':
     parser.add_argument('--log', type=str, default='debug', help='Logging level')
     args = parser.parse_args()
 
+    print('Am I using GPU: ', torch.cuda.is_available())
+
     ## set the logger
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
