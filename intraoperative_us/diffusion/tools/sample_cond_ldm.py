@@ -192,6 +192,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm):
     trial_folder = os.path.join(par_dir, 'ius', trial)
     assert os.listdir(trial_folder), f'No trained model found in trial folder {trial_folder}'
     logging.info(os.listdir(trial_folder))
+    model_dir = os.path.join(par_dir, 'ius', trial, experiment)
 
     if 'cond_vae' in os.listdir(trial_folder):
         ## Condition VAE + LDM
@@ -209,14 +210,12 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm):
             ## conditional ldm
             model = unet_cond_base.Unet(im_channels=autoencoder_model_config['z_channels'], model_config=diffusion_model_config).to(device)
             model.eval()
-            model_dir = os.path.join(par_dir, trial, experiment)
             model.load_state_dict(torch.load(os.path.join(model_dir, f'ldm_{epoch}.pth'),map_location=device), strict=False)
         
         else:
             ## unconditional ldm
             model = unet_base.Unet(im_channels=autoencoder_model_config['z_channels'], model_config=diffusion_model_config).to(device)
             model.eval()
-            model_dir = os.path.join(par_dir, trial, experiment)
             model.load_state_dict(torch.load(os.path.join(model_dir, f'ldm_{epoch}.pth'),map_location=device), strict=False)
 
     if 'vae' in os.listdir(trial_folder):
@@ -233,14 +232,8 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm):
         # conditional ldm
         model = unet_cond_base.Unet(im_channels=autoencoder_model_config['z_channels'], model_config=diffusion_model_config).to(device)
         model.eval()
-        model_dir = os.path.join(par_dir, trial, experiment)
         model.load_state_dict(torch.load(os.path.join(model_dir, f'ldm_{epoch}.pth'),map_location=device), strict=False)
 
-    if 'vqvae' in os.listdir(trial_folder):
-        logging.info(f'Load trained {os.listdir(trial_folder)[0]} model')
-        vae = VQVAE(im_channels=dataset_config['im_channels'], model_config=autoencoder_model_config).to(device)
-        vae.eval()
-        vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vqvae', 'vqvae.pth'),map_location=device))
     #####################################
 
     ######### Create output directories #############
