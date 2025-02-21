@@ -21,7 +21,7 @@ from intraoperative_us.diffusion.models.vae import VAE
 import intraoperative_us.diffusion.models.unet_cond_base as unet_cond_base
 import intraoperative_us.diffusion.models.unet_base as unet_base
 from intraoperative_us.diffusion.sheduler.scheduler import LinearNoiseScheduler
-from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
+from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS, GeneratedMaskDataset
 from intraoperative_us.diffusion.tools.infer_vae import get_best_model
 from torch.utils.data import DataLoader
 from intraoperative_us.diffusion.tools.train_cond_ldm import get_text_embeddeing
@@ -33,7 +33,7 @@ import cv2
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def sample(model, scheduler, train_config, diffusion_model_config, condition_config,
+def sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir,
            autoencoder_model_config, diffusion_config, dataset_config, type_model, vae, save_folder, guide_w, activate_cond_ldm):
     """
     Sample stepwise by going backward one timestep at a time.
@@ -51,7 +51,7 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
         condition_types = condition_config['condition_types']
     logging.info(f"DIMENSION OF THE LATENT SPACE: {autoencoder_model_config['z_channels']}")
 
-    ## load validation dataset
+    ## Load validation dataset
     data_img = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
                                im_channels= dataset_config['im_channels'],
@@ -63,29 +63,33 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
                                test_percentage=dataset_config['test_percentage'],
                                condition_config=condition_config,
                                data_augmentation=False
-                               )                        
+                               )
+    ## Load Generated mask                    
     logging.info(f'len of the dataset: {len(data_img)}')
     data_loader = DataLoader(data_img, batch_size=train_config['ldm_batch_size_sample'], shuffle=False, num_workers=8)
 
+    data_img = GeneratedMaskDataset(par_dir = generated_mask_dir, size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'])
+    data_loader = DataLoader(data_img, batch_size=train_config['ldm_batch_size_sample'], shuffle=False, num_workers=8)
+    logging.info(f'len of the dataset: {len(data_img)}')
+
     ## if the condition is 'text' i have to load the text model
     if 'text' in condition_types:
-        
         text_configuration = condition_config['text_condition_config']
         regression_model = data_img.get_model_embedding(text_configuration['text_embed_model'], text_configuration['text_embed_trial'])
         regression_model.eval()
 
     for btc, data in enumerate(data_loader):
-        cond_input = None
+        cond_input = {}
         uncond_input = {}
         if condition_config is not None:
-            im, cond_input = data  # im is the image (batch_size=8), cond_input is the conditional input ['image for the mask']
-            for key in cond_input.keys(): ## for all the type of condition, we move the  tensor on the device
-                cond_input[key] = cond_input[key].to(device)
+            # im is the image (batch_size=8), cond_input is the conditional input ['image for the mask']
+            for key in condition_config['condition_types']: ## for all the type of condition, we move the  tensor on the device
+                cond_input[key] = data.to(device)
                 uncond_input[key] = torch.zeros_like(cond_input[key])
         else:
-            im = data
+            pass
     
-        xt = torch.randn((im.shape[0],
+        xt = torch.randn((cond_input[key].shape[0],
                       autoencoder_model_config['z_channels'],
                       im_size_h,
                       im_size_w)).to(device)
@@ -146,7 +150,7 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
             cv2.imwrite(os.path.join(save_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
 
 
-def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm):
+def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, generated_mask_dir):
     # Read the config file #
     with open(conf, 'r') as file:
         try:
@@ -248,7 +252,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm):
     
     ######## Sample from the model 
     with torch.no_grad():
-        sample(model, scheduler, train_config, diffusion_model_config, condition_config,
+        sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir,
                autoencoder_model_config, diffusion_config, dataset_config, type_model, vae, save_folder, guide_w, activate_cond_ldm)
 
 
@@ -260,6 +264,7 @@ if __name__ == '__main__':
                                                                               hyperparameters (file .yaml) that is used for the training, it can be cond_ldm, cond_ldm_2, """)
     parser.add_argument('--epoch', type=int, default=100, help='epoch to sample, this is the epoch of cond ldm model')
     parser.add_argument('--guide_w', type=float, default=0.0, help='guide_w for the conditional model, w=-1 [unconditional], w=0 [vanilla conditioning], w>0 [guided conditional]')
+    parser.add_argument('--generated_mask_dir', type=str, default='generated_mask', help='folder to save the generated mask')
     parser.add_argument('--cond_ldm', action='store_true', help="""Choose whether or not activate the conditional ldm. Id activate enable the combo condVAE + condLDM
                                                                      Default=False that means
                                                                      'cond_vae' -> cond VAE + unconditional LDM
@@ -276,6 +281,9 @@ if __name__ == '__main__':
     experiment_dir = os.path.join(args.save_folder, 'ius', args.trial, args.experiment)
     config = os.path.join(experiment_dir, 'config.yaml')
 
-    infer(par_dir = args.save_folder, conf=config, trial=args.trial, experiment=args.experiment ,epoch=args.epoch, guide_w=args.guide_w, activate_cond_ldm=args.cond_ldm)
+    infer(par_dir = args.save_folder, conf=config, trial=args.trial, 
+         experiment=args.experiment ,epoch=args.epoch, guide_w=args.guide_w, 
+         generated_mask_dir=args.generated_mask_dir,
+         activate_cond_ldm=args.cond_ldm)
     plt.show()
 

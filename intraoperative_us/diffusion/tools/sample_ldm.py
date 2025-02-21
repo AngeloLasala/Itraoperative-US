@@ -67,9 +67,8 @@ def sample(model, scheduler, train_config, diffusion_model_config, sampling_conf
             
             ims = torch.clamp(ims, 0., 1.).detach().cpu()
         
-        for i in range(ims.shape[0]):
+        for i in range(xt.shape[0]):
             cv2.imwrite(os.path.join(save_folder, f"x0_{btc * sampling_config['sampling_batch'] + i}.png"), ims[i].numpy()[0]*255)
-
 
 def infer(par_dir, conf, trial, experiment, epoch, type_image):
     # Read the config file #
@@ -118,7 +117,7 @@ def infer(par_dir, conf, trial, experiment, epoch, type_image):
     
 
     # Create output directories
-    save_folder = os.path.join(model_dir, f'w_-1.0', f'samples_ep_{epoch}')
+    save_folder = os.path.join(model_dir, f'w_1.0', f'samples_ep_{epoch}')
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
     else:

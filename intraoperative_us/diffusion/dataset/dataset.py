@@ -372,6 +372,32 @@ class IntraoperativeUS_mask():
         label = transforms.functional.to_tensor(label)  
         return label
 
+class GeneratedMaskDataset(torch.utils.data.Dataset):
+    """
+    Dataset of generated mask image loaded from the path
+    """
+    def __init__(self, par_dir, size, input_channels):
+        self.par_dir = par_dir
+        self.size = size
+        self.input_channels = input_channels
+
+        self.data_dir_label = par_dir
+        self.files = [os.path.join(self.data_dir_label, f'x0_{i}.png') for i in range(len(os.listdir(self.data_dir_label)))]
+
+    def __len__(self):
+        return len(os.listdir(self.data_dir_label))
+
+    def __getitem__(self, idx):
+        image_path = self.files[idx]
+
+        # read the image wiht PIL
+        image = Image.open(image_path)
+        resize = transforms.Resize(size=self.size)
+        image = resize(image)
+        if self.input_channels == 1: image = image.convert('L')
+        image = transforms.functional.to_tensor(image)
+        return image
+
 if __name__ == '__main__':
     current_directory = os.path.dirname(__file__)
     par_dir = os.path.dirname(current_directory)
