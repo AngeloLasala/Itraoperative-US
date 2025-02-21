@@ -1,6 +1,6 @@
 import torch
 
-def get_numer_parameter(model):
+def get_number_parameter(model):
     """
     Get the number of parameters of the model
 

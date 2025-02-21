@@ -1,11 +1,15 @@
 """
 Variational Autoencorder (VAE) model design for the Latent Diffusion Model (LDM)
-"""
 
+-- Class VAE -> implementation from scratch
+-- Class AutoencoderKL -> loaded from hugginface
+"""
 import torch
 import torch.nn as nn
 from intraoperative_us.diffusion.models.blocks import DownBlock, MidBlock, UpBlock
-from torchsummary import summary 
+from torchsummary import summary
+from diffusers import AutoencoderKL
+from intraoperative_us.diffusion.utils.utils import get_number_parameter
 
 
 class VAE(nn.Module):
@@ -133,6 +137,13 @@ class VAE(nn.Module):
         
         #print(f'output channel Conv2d {im_channels}')
     
+    def get_number_parameter(self):
+        num_params = sum(p.numel() for p in self.parameters()) / 1e9
+        trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad) / 1e9
+        print(f"Total parameters: {num_params:.3f} B")
+        print(f"Trainable parameters: {trainable_params:.3f} B")
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+    
     def encode(self, x):
         out = self.encoder_conv_in(x)
         
@@ -201,20 +212,28 @@ class VAE(nn.Module):
 
 if __name__ == '__main__':
     model_config = {
-        'z_channels': 2,
-        'down_channels': [32, 64, 128, 256],
+        'z_channels': 4,
+        'down_channels': [64, 128, 256, 256],
         'mid_channels': [256, 256],
         'down_sample': [True, True, True],
         'attn_down': [False, False, False],
         'norm_channels': 32,
         'num_heads': 16,
-        'num_down_layers': 1,
-        'num_mid_layers': 1,
-        'num_up_layers': 1
+        'num_down_layers': 2,
+        'num_mid_layers': 2,
+        'num_up_layers': 2
     }
     model = VAE(1, model_config)
     x = torch.randn(1, 1, 256, 256)
     out = model(x)
     print(out[0].shape, out[1].shape)
-    # 
-    # #print(summary(model))
+    print(model.get_number_parameter())
+    print()
+
+    ## Load and save variation of VAE for costum training
+    vae = AutoencoderKL.from_pretrained("sd-legacy/stable-diffusion-v1-5", subfolder="vae", use_safetensors=True)
+    
+    ## save orignal configuration of SDv1.5
+    vae.save_pretrained("vae/AutoencoderKL_SD1.5_default")
+    model = AutoencoderKL.from_pretrained("vae/AutoencoderKL_SD1.5_default")
+
