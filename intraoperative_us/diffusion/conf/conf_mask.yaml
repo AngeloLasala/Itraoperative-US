@@ -94,3 +94,7 @@ train_params:
   autoencoder_acc_steps : 1
   autoencoder_img_save_steps : 8
   save_frequency : 300
+
+sampling_params: 
+  N_gen: 400
+  sampling_batch: 10
