@@ -15,7 +15,7 @@ for trial in trial_3; do
                 python -m intraoperative_us.diffusion.tools.sample_cond_ldm\
                         --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
                         --trial $trial\
-                        --experiment cond_ldm_5\
+                        --experiment cond_ldm_3\
                         --epoch $epoch\
                         --guide_w $w\
 
