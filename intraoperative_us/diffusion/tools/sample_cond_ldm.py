@@ -264,7 +264,7 @@ if __name__ == '__main__':
                                                                      Default=False that means
                                                                      'cond_vae' -> cond VAE + unconditional LDM
                                                                      'vae' -> VAE + conditional LDM""")
-    parser.add_argument('--log', type=str, default='debug', help='Logging level')
+    parser.add_argument('--log', type=str, default='info', help='Logging level')
     args = parser.parse_args()
 
     print('Am I using GPU: ', torch.cuda.is_available())
