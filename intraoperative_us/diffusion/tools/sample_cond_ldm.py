@@ -189,7 +189,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm):
     ###############################################
     
     ########## Load AUTOENCODER #############
-    trial_folder = os.path.join(par_dir, trial)
+    trial_folder = os.path.join(par_dir, 'ius', trial)
     assert os.listdir(trial_folder), f'No trained model found in trial folder {trial_folder}'
     logging.info(os.listdir(trial_folder))
 
