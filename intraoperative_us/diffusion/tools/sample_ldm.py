@@ -8,6 +8,10 @@ import yaml
 import os
 from torchvision.utils import make_grid
 from PIL import Image
+import cv2
+import random
+import logging
+import numpy as np
 from tqdm import tqdm
 from intraoperative_us.diffusion.models.unet_base import Unet
 from intraoperative_us.diffusion.sheduler.scheduler import LinearNoiseScheduler
@@ -16,12 +20,12 @@ from intraoperative_us.diffusion.models.vqvae import VQVAE
 from intraoperative_us.diffusion.models.vae import VAE
 from intraoperative_us.diffusion.tools.infer_vae import get_best_model
 from torch.utils.data import DataLoader
-import cv2
+
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def sample(model, scheduler, train_config, diffusion_model_config, sampling_config
+def sample(model, scheduler, train_config, diffusion_model_config, sampling_config,
            autoencoder_model_config, diffusion_config, dataset_config, vae, save_folder):
     """
     Sample stepwise by going backward one timestep at a time.
@@ -39,8 +43,8 @@ def sample(model, scheduler, train_config, diffusion_model_config, sampling_conf
     if device == 'cuda':
         torch.cuda.manual_seed_all(seed)
 
-
-    for btc, times_ii in range(int(sampling_config['N_gen'] / sampling_config['sampling_batch'])):
+    N_loop = int(sampling_config['N_gen'] / sampling_config['sampling_batch'])
+    for btc, times_ii in enumerate(range(N_loop)):
         xt = torch.randn((sampling_config['sampling_batch'],
                         autoencoder_model_config['z_channels'],
                         im_size_h,
@@ -61,11 +65,10 @@ def sample(model, scheduler, train_config, diffusion_model_config, sampling_conf
             else:
                 ims = xt
             
-            ims = torch.clamp(ims, -1., 1.).detach().cpu()
-            ims = (ims + 1) / 2
+            ims = torch.clamp(ims, 0., 1.).detach().cpu()
         
         for i in range(ims.shape[0]):
-            cv2.imwrite(os.path.join(save_folder, f'x0_{btc * sampling_config['sampling_batch'] + i}.png'), ims[i].numpy()[0]*255)
+            cv2.imwrite(os.path.join(save_folder, f"x0_{btc * sampling_config['sampling_batch'] + i}.png"), ims[i].numpy()[0]*255)
 
 
 def infer(par_dir, conf, trial, experiment, epoch, type_image):
@@ -136,6 +139,7 @@ if __name__ == '__main__':
     parser.add_argument('--trial', type=str, default='trial_1', help='trial name for saving the model, it is the trial folde that contain the VAE model')
     parser.add_argument('--experiment', type=str, default='cond_ldm', help="""name of expermient, it is refed to the type of condition and in general to the 
                                                                               hyperparameters (file .yaml) that is used for the training, it can be cond_ldm, cond_ldm_2, """)
+    parser.add_argument('--type_image', type=str, default='mask', help='type of image to sample, it can be ius or celebhq')
     parser.add_argument('--epoch', type=int, default=100, help='epoch to sample, this is the epoch of cond ldm model')
     parser.add_argument('--log', type=str, default='info', help='Logging level')
     args = parser.parse_args()
@@ -146,10 +150,8 @@ if __name__ == '__main__':
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
 
-
-
-    experiment_dir = os.path.join(args.save_folder, 'ius', args.trial, args.experiment)
+    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial, args.experiment)
     config = os.path.join(experiment_dir, 'config.yaml')
 
     # save_folder = os.path.join(par_dir, 'trained_model', args.trial)
-    infer(par_dir = args.save_folder, conf=config, trial=args.trial, experiment=args.experiment ,epoch=args.epoch)
+    infer(par_dir = args.save_folder, conf=config, trial=args.trial, experiment=args.experiment, epoch=args.epoch, type_image=args.type_image)
