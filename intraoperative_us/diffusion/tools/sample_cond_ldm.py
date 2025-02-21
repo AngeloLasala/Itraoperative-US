@@ -278,7 +278,7 @@ if __name__ == '__main__':
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
 
-    experiment_dir = os.path.join(args.save_folder, args.trial, args.experiment)
+    experiment_dir = os.path.join(args.save_folder, 'ius', args.trial, args.experiment)
     config = os.path.join(experiment_dir, 'config.yaml')
 
     infer(par_dir = args.save_folder, conf=config, trial=args.trial, experiment=args.experiment ,epoch=args.epoch, guide_w=args.guide_w, activate_cond_ldm=args.cond_ldm)
