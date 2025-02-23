@@ -34,7 +34,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 def sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir,
-           autoencoder_model_config, diffusion_config, dataset_config, type_model, vae, save_folder, guide_w, activate_cond_ldm):
+           autoencoder_model_config, diffusion_config, dataset_config, type_model, vae, save_folder, mask_folder, ius_folder,
+           guide_w, activate_cond_ldm):
     """
     Sample stepwise by going backward one timestep at a time.
     We save the x0 predictions
@@ -52,21 +53,21 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
     logging.info(f"DIMENSION OF THE LATENT SPACE: {autoencoder_model_config['z_channels']}")
 
     ## Load validation dataset
-    data_img = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
-                               dataset_path= dataset_config['dataset_path'],
-                               im_channels= dataset_config['im_channels'],
-                               splitting_json=dataset_config['splitting_json'], 
-                               split='val',
-                               splitting_seed=dataset_config['splitting_seed'],
-                               train_percentage=dataset_config['train_percentage'],
-                               val_percentage=dataset_config['val_percentage'],
-                               test_percentage=dataset_config['test_percentage'],
-                               condition_config=condition_config,
-                               data_augmentation=False
-                               )
-    ## Load Generated mask                    
-    logging.info(f'len of the dataset: {len(data_img)}')
-    data_loader = DataLoader(data_img, batch_size=train_config['ldm_batch_size_sample'], shuffle=False, num_workers=8)
+    # data_img = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+    #                            dataset_path= dataset_config['dataset_path'],
+    #                            im_channels= dataset_config['im_channels'],
+    #                            splitting_json=dataset_config['splitting_json'], 
+    #                            split='val',
+    #                            splitting_seed=dataset_config['splitting_seed'],
+    #                            train_percentage=dataset_config['train_percentage'],
+    #                            val_percentage=dataset_config['val_percentage'],
+    #                            test_percentage=dataset_config['test_percentage'],
+    #                            condition_config=condition_config,
+    #                            data_augmentation=False
+    #                            )
+    # ## Load Generated mask                    
+    # logging.info(f'len of the dataset: {len(data_img)}')
+    # data_loader = DataLoader(data_img, batch_size=train_config['ldm_batch_size_sample'], shuffle=False, num_workers=8)
 
     data_img = GeneratedMaskDataset(par_dir = generated_mask_dir, size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'])
     data_loader = DataLoader(data_img, batch_size=train_config['ldm_batch_size_sample'], shuffle=False, num_workers=8)
@@ -147,7 +148,8 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
             ims = (ims + 1) / 2
         
         for i in range(ims.shape[0]):
-            cv2.imwrite(os.path.join(save_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
+            cv2.imwrite(os.path.join(ius_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
+            cv2.imwrite(os.path.join(mask_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), cond_input['image'][i].numpy()[0]*255)
 
 
 def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, generated_mask_dir):
@@ -244,6 +246,10 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
     save_folder = os.path.join(model_dir, f'w_{guide_w}', f'samples_ep_{epoch}')
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
+        mask_folder = os.path.join(save_folder, 'masks')
+        os.makedirs(mask_folder)
+        ius_folder = os.path.join(save_folder, 'ius')
+        os.makedirs(ius_folder)
     else:
         overwrite = input(f"The save folder {save_folder} already exists. Do you want to overwrite it? (y/n): ")
         if overwrite.lower() != 'y':
@@ -253,7 +259,8 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
     ######## Sample from the model 
     with torch.no_grad():
         sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir,
-               autoencoder_model_config, diffusion_config, dataset_config, type_model, vae, save_folder, guide_w, activate_cond_ldm)
+               autoencoder_model_config, diffusion_config, dataset_config, type_model, vae, save_folder, mask_folder, ius_folder,
+               guide_w, activate_cond_ldm)
 
 
 if __name__ == '__main__':

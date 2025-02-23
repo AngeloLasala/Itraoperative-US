@@ -118,20 +118,6 @@ def train(conf, save_folder):
     data_loader = DataLoader(data, batch_size=train_config['autoencoder_batch_size'], shuffle=True, num_workers=4, timeout=10)
     val_data_loader = DataLoader(val_data, batch_size=train_config['autoencoder_batch_size'], shuffle=True, num_workers=4, timeout=10)
 
-    # get laten space from model for each image
-    for im in data_loader:
-        im = im.float().to(device)
-        model_output = model.encode(im).latent_dist.sample()  # Encode image
-        model_output = model_output * 0.18215
-        print(model_output.max(), model_output.min())
-        ## plot the latent space
-        plt.figure(figsize=(10, 10))
-        plt.imshow(im.cpu().detach().numpy()[0,0,:,:])
-        for i in range(4):
-            plt.figure(figsize=(10, 10))
-            plt.imshow(model_output.cpu().detach().numpy()[0,0,:,:])
-        plt.show()
-        break
 
     # generate save folder
     save_dir = os.path.join(save_folder, 'ius')
@@ -191,8 +177,8 @@ def train(conf, save_folder):
                 output, encoder_out = model_output
                 mean, logvar = torch.chunk(encoder_out, 2, dim=1)
             else:
-                encoder_out = model.encode(im)  # Encode image
-                mean = encoder_out.latent_dist.mean  # Mean of latent space
+                encoder_out = model.encode(im)           # Encode image
+                mean = encoder_out.latent_dist.mean      # Mean of latent space
                 logvar = encoder_out.latent_dist.logvar  # Log-variance
                 output = model.decode(model.encode(im).latent_dist.sample()).sample
 
@@ -220,7 +206,7 @@ def train(conf, save_folder):
             g_loss = recon_loss + train_config['kl_weight'] * kl_loss
 
             if step_count > disc_step_start:
-                disc_fake_pred = discriminator(model_output[0])
+                disc_fake_pred = discriminator(output)
                 disc_fake_loss = disc_criterion(disc_fake_pred,
                                                 torch.ones(disc_fake_pred.shape,device=disc_fake_pred.device))
                 g_loss += train_config['disc_weight'] * disc_fake_loss 
