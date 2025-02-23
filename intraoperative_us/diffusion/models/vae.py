@@ -231,18 +231,20 @@ if __name__ == '__main__':
     print()
 
     ## Load and save variation of VAE for costum training
-    vae = AutoencoderKL.from_pretrained("sd-legacy/stable-diffusion-v1-5", subfolder="vae", use_safetensors=True)
+    # vae = AutoencoderKL.from_pretrained("sd-legacy/stable-diffusion-v1-5", subfolder="vae", use_safetensors=True)
     
     # ## save orignal configuration of SDv1.5
     # vae.save_pretrained("vae/AutoencoderKL_SD1.5_default")
     # model = AutoencoderKL.from_pretrained("vae/AutoencoderKL_SD1.5_default")
     model_adapt = AutoencoderKL.from_pretrained(
         "vae/AutoencoderKL_SD1.5_default",
-        in_channels=1,
-        sample_size=1,
+        # in_channels=1,
+        # sample_size=1,
         # block_out_channels=[128//4, 256//4, 512//4, 512//4],
         # low_cpu_mem_usage=False,
         # ignore_mismatched_sizes=True
     )
     print(model_adapt.config)
+    for k in model_adapt.config.keys():
+        print(k, model_adapt.config[k])
 
