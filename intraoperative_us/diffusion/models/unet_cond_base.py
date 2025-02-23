@@ -229,5 +229,5 @@ if __name__ == '__main__':
     keypoints_cond = torch.randn(5, 12)
     eco_parameters_cond = torch.randn(5, 2)
     out = model(x, t, {'image': mask_cond})
-    get_numer_parameter(model)
+    get_number_parameter(model)
     print(out.shape)
