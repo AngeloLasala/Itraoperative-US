@@ -146,11 +146,11 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
             
             ims = torch.clamp(ims, -1., 1.).detach().cpu()
             ims = (ims + 1) / 2
-        
+            mask = cond_input['image'].detach().cpu()
+    
         for i in range(ims.shape[0]):
             cv2.imwrite(os.path.join(ius_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
-            cv2.imwrite(os.path.join(mask_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), cond_input['image'][i].numpy()[0]*255)
-
+            cv2.imwrite(os.path.join(mask_folder, f'mask_{btc * train_config["ldm_batch_size_sample"] + i}.png'), mask[i].numpy()[0]*255)
 
 def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, generated_mask_dir):
     # Read the config file #
