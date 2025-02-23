@@ -80,7 +80,7 @@ def train(conf, save_folder):
                 ).to(device)
         else:
             # pretrained weights
-            logging.info('Training VAE with pretrained Hugginface model SVv1.5')
+            logging.info('Training VAE with pretrained Hugginface model SDv1.5')
             model = AutoencoderKL.from_pretrained(
             autoencoder_config['autoencoder_type'],
             in_channels=dataset_config['im_channels'],
@@ -350,6 +350,8 @@ if __name__ == '__main__':
     ## set the logger
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
+
+    print('Am I using the GPU? ', torch.cuda.is_available())  
 
     current_directory = os.path.dirname(__file__)
     par_dir = os.path.dirname(current_directory)
