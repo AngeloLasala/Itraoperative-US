@@ -57,6 +57,7 @@ def train(conf, save_folder):
 
     else:
         if initialization == 'random':
+            logging.info('Training VAE with random initialization of Hugginface model')
             ## random initialization
             model = AutoencoderKL(
                     in_channels=dataset_config['im_channels'],
@@ -79,6 +80,7 @@ def train(conf, save_folder):
                 ).to(device)
         else:
             # pretrained weights
+            logging.info('Training VAE with pretrained Hugginface model SVv1.5')
             model = AutoencoderKL.from_pretrained(
             autoencoder_config['autoencoder_type'],
             in_channels=dataset_config['im_channels'],
