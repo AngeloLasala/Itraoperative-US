@@ -6,7 +6,7 @@ from einops import einsum
 import torch.nn as nn
 from intraoperative_us.diffusion.models.blocks import get_time_embedding
 from intraoperative_us.diffusion.models.blocks import DownBlock, MidBlock, UpBlockUnet
-from intraoperative_us.diffusion.utils.utils import get_numer_parameter
+from intraoperative_us.diffusion.utils.utils import get_number_parameter
 # from utils.config_utils import *
 
 def get_config_value(config, key, default_value):
