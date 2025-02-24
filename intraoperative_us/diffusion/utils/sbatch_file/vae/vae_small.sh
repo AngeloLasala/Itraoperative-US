@@ -5,8 +5,8 @@
 #SBATCH --ntasks-per-node=1          # 1 tasks per node
 #SBATCH --time=9:50:00                 # time limits: 1 hour
 #SBATCH --partition=boost_usr_prod   # partition name
-#SBATCH --error=vae_small.err       # standard error file
-#SBATCH --output=vae_small.out      # standard output file
+#SBATCH --error=vae_big.err       # standard error file
+#SBATCH --output=vae_big.out      # standard output file
 #SBATCH --account=IscrC_Med-LMGM     # account name
 
 python -m intraoperative_us.diffusion.tools.train_vae --conf conf\

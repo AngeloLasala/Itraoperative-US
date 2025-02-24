@@ -44,14 +44,14 @@ class GenerateDataset(torch.utils.data.Dataset):
         self.size = size
         self.input_channels = input_channels
 
-        self.data_dir_label = self.get_eco_path()
-        self.files = [os.path.join(self.data_dir_label, f'x0_{i}.png') for i in range(len(os.listdir(self.data_dir_label)))]
+        self.data_ius= self.get_eco_path()
+        self.files_data = [os.path.join(self.data_ius, f'x0_{i}.png') for i in range(len(os.listdir(self.data_ius)))]
 
     def __len__(self):
-        return len(os.listdir(self.data_dir_label))
+        return len(self.files_data)
 
     def __getitem__(self, idx):
-        image_path = self.files[idx]
+        image_path = self.files_data[idx]
 
         # read the image wiht PIL
         image = Image.open(image_path)
@@ -67,8 +67,12 @@ class GenerateDataset(torch.utils.data.Dataset):
         """
         retrive the path 'eco' from current directory
         """
-        data_dir_diff_sample= os.path.join(self.par_dir, self.trial, self.experiment, f'w_{self.guide_w}', f'samples_ep_{self.epoch}')
-        return data_dir_diff_sample
+        data_ius = os.path.join(self.par_dir, self.trial, self.experiment, f'w_{self.guide_w}', f'samples_ep_{self.epoch}','ius')
+        return data_ius
+
+    def get_mask_images(self):
+        pass
+
 
 def infer(par_dir, conf, trial, experiment, epoch, guide_w, compute_real, compute_gen):
     ######## Read the config file #######
@@ -87,7 +91,6 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, compute_real, comput
             "condition type missing in conditioning config"
         condition_types = condition_config['condition_types']
 
-    #############################
 
     # Train dataset
     data_img = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
@@ -257,7 +260,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, compute_real, comput
 
     plt.scatter(real_tsne[:,0], real_tsne[:,1], c='blue', label='Train data', s=60)
     plt.scatter(val_tsne[:,0], val_tsne[:,1], c='green', label='Val data', s=60)
-    plt.scatter(gen_tsne[:,0], gen_tsne[:,1], c='lightgreen', label='Val data', s=60)
+    plt.scatter(gen_tsne[:,0], gen_tsne[:,1], c='lightgreen', label='Gen data', s=60)
 
     plt.xlabel('TSNE 1', fontsize=22)
     plt.ylabel('TSNE 2', fontsize=22)
@@ -274,6 +277,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Invastigate the latent space')
     parser.add_argument('--save_folder', type=str, default="/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/trained_model",
                                                    help='folder to save the model')
+    parser.add_argument('--type_image', type=str, default='ius', help='type of image to evaluate, ius or mask')
     parser.add_argument('--trial', type=str, default='trial_1', help='trial name for saving the model, it is the trial folde that contain the VAE model')
     parser.add_argument('--experiment', type=str, default='cond_ldm', help="""name of expermient, it is refed to the type of condition and in general to the 
                                                                               hyperparameters (file .yaml) that is used for the training, it can be cond_ldm, cond_ldm_2, """)
@@ -288,12 +292,12 @@ if __name__ == '__main__':
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
 
-    experiment_dir = os.path.join(args.save_folder, args.trial)
+    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial)
     if 'vae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vae', 'config.yaml')
     if 'vqvae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vqvae', 'config.yaml')
     if 'cond_vae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'cond_vae', 'config.yaml')
 
 
-    infer(par_dir = args.save_folder, conf=config, trial=args.trial, 
+    infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, 
          experiment=args.experiment, epoch=args.epoch, guide_w=args.guide_w, compute_real=args.compute_encodings_real, compute_gen=args.compute_encodings_gen)
     plt.show()
