@@ -212,7 +212,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, compute_real, comput
     real_gen_stack = pca.fit_transform(real_gen_stack)
 
     np.random.seed(42)
-    seeds = np.random.choice(np.arange(1000), 30, replace=False)
+    seeds = np.random.choice(np.arange(1000), 1, replace=False)
     logging.info(f'seeds TSNE: {seeds}')
     print('TSNE embedding...')
 
@@ -220,7 +220,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, compute_real, comput
     progress_bar = tqdm(total=len(seeds), disable=False)
     progress_bar.set_description(f"TSNE random")
     for s in seeds:
-        tsne = TSNE(n_components=2, perplexity=3, random_state=s)
+        tsne = TSNE(n_components=2, random_state=s)
         encoded_output_tsne = tsne.fit_transform(real_gen_stack)
         real_gen_stack_tsne = encoded_output_tsne.copy()
 

@@ -22,6 +22,7 @@ from sklearn.manifold import TSNE
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
 from intraoperative_us.diffusion.models.vqvae import VQVAE
 from intraoperative_us.diffusion.models.vae import VAE
+from diffusers import AutoencoderKL
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -148,10 +149,10 @@ def infer(par_dir, conf, trial, show_plot=False):
             config = yaml.safe_load(file)
         except yaml.YAMLError as exc:
             print(exc)
-    autoencoder_model_config = config['autoencoder_params']
     train_config = config['train_params']
     dataset_config = config['dataset_params']
-    autoencoder_model_config = config['autoencoder_params']
+    autoencoder_config = config['autoencoder_params']
+    initialization = autoencoder_config['initialization']
 
     # Create the dataset and dataloader
     data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
@@ -180,13 +181,71 @@ def infer(par_dir, conf, trial, show_plot=False):
         logging.info(f'Load trained {os.listdir(trial_folder)[0]} model')
         best_model = get_best_model(os.path.join(trial_folder,'vae'))
         logging.info(f'best model  epoch {best_model}\n')
-        vae = VAE(im_channels=dataset_config['im_channels'], model_config=autoencoder_model_config).to(device)
+        if initialization == 'scratch':
+            vae = VAE(im_channels=dataset_config['im_channels'], model_config=autoencoder_config).to(device)
+            
+        else:
+            if initialization == 'random':
+                logging.info('Training VAE with random initialization of Hugginface model')
+                ## random initialization
+                vae = AutoencoderKL(
+                        in_channels=dataset_config['im_channels'],
+                        out_channels=dataset_config['im_channels'],
+                        sample_size=dataset_config['im_size_h'],
+                        block_out_channels=autoencoder_config['down_channels'],
+                        latent_channels=autoencoder_config.get('latent_channels', 4),  # Default is 4
+                        down_block_types=autoencoder_config.get('down_block_types', [
+                            "DownEncoderBlock2D",
+                            "DownEncoderBlock2D",
+                            "DownEncoderBlock2D",
+                            "DownEncoderBlock2D"
+                        ]),
+                        up_block_types=autoencoder_config.get('up_block_types', [
+                            "UpDecoderBlock2D",
+                            "UpDecoderBlock2D",
+                            "UpDecoderBlock2D",
+                            "UpDecoderBlock2D"
+                        ])
+                    ).to(device)
+
+            elif initialization == 'only_D':
+                logging.info('Training VAE with only decoder weights of Hugginface model')
+                
+                vae = AutoencoderKL.from_pretrained(
+                autoencoder_config['autoencoder_type'],
+                in_channels=dataset_config['im_channels'],
+                out_channels=dataset_config['im_channels'],
+                sample_size=dataset_config['im_size_h'],
+                block_out_channels=autoencoder_config['down_channels'],
+                low_cpu_mem_usage=False,
+                ignore_mismatched_sizes=True).to(device)
+
+                # Freeze the encoder by disabling gradient updates
+                for param in vae.encoder.parameters():
+                    param.requires_grad = False
+                
+                decoder_filter = filter(lambda p: p.requires_grad, vae.parameters())
+                
+            else:
+                # pretrained weights
+                logging.info('Training VAE with pretrained Hugginface model SDv1.5')
+                vae = AutoencoderKL.from_pretrained(
+                autoencoder_config['autoencoder_type'],
+                in_channels=dataset_config['im_channels'],
+                out_channels=dataset_config['im_channels'],
+                sample_size=dataset_config['im_size_h'],
+                block_out_channels=autoencoder_config['down_channels'],
+                low_cpu_mem_usage=False,
+                ignore_mismatched_sizes=True).to(device)
+
         vae.eval()
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vae', f'vae_best_{best_model}.pth'), map_location=device))
 
+
+
     if 'vqvae' in os.listdir(trial_folder):
         logging.info(f'Load trained {os.listdir(trial_folder)[0]} model')
-        vae = VQVAE(im_channels=dataset_config['im_channels'], model_config=autoencoder_model_config).to(device)
+        vae = VQVAE(im_channels=dataset_config['im_channels'], model_config=autoencoder_config).to(device)
         vae.eval()
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vqvae', 'vqvae.pth'),map_location=device))
 
@@ -204,9 +263,15 @@ def infer(par_dir, conf, trial, show_plot=False):
             im = im.float().to(device)
 
             ## Encoder - get the latent space
-            encoded_output, _ = vae.encode(im)
-            output = vae.decode(encoded_output)
+            if initialization == 'scratch':
+                encoded_output, _ = vae.encode(im)
+                output = vae.decode(encoded_output)
 
+            else:
+                encoded_output = vae.encode(im).latent_dist.sample()           # Encode image
+                output = vae.decode(vae.encode(im).latent_dist.sample()).sample
+            
+            
             recon_loss = recon_criterion(output, im)
             encoded_output = torch.clamp(encoded_output, -1., 1.)
             encoded_output = (encoded_output + 1) / 2
@@ -215,12 +280,18 @@ def infer(par_dir, conf, trial, show_plot=False):
 
             if show_plot and nn%20 == 0:
                 encoded_plt = encoded_output[0,:,:,:].cpu().permute(1,2,0).numpy()
+                print(f'min {encoded_output.min()}, MAX: {encoded_output.max()}')
 
                 ## plot the real encoded_output
                 for i in range(encoded_plt.shape[2]):
                     plt.figure(figsize=(8, 8), num=f'Latent channel {i}')
                     plt.imshow(encoded_plt[:,:,i])
                     plt.axis('off')
+                plt.axis('off')
+
+                ## plot the image, latent space and the reconstructed
+                plt.figure(num='reconstructed')
+                plt.imshow(output[0,0,:,:].cpu().numpy(), cmap='gray')
                 plt.axis('off')
 
                 ## plot the image, latent space and the reconstructed image
@@ -284,6 +355,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Invastigate the latent space')
     parser.add_argument('--save_folder', type=str, default="/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/trained_model",
                                                    help='folder to save the model')
+    parser.add_argument('--type_image', type=str, default='ius', help='type of image to investigate, ius or mask')
     parser.add_argument('--trial', type=str, default='trial_1', help='trial name for saving the model, it is the trial folde that contain the VAE model')
     parser.add_argument('--show_plot', action='store_true', help="show the latent space imgs, default=False")
     parser.add_argument('--log', type=str, default='debug', help='Logging level')
@@ -293,10 +365,10 @@ if __name__ == '__main__':
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
 
-    experiment_dir = os.path.join(args.save_folder, args.trial)
+    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial)
     if 'vae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vae', 'config.yaml')
     if 'vqvae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vqvae', 'config.yaml')
 
 
-    infer(par_dir = args.save_folder, conf=config, trial=args.trial, show_plot=args.show_plot)
+    infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, show_plot=args.show_plot)
     plt.show()
