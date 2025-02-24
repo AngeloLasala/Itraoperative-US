@@ -78,6 +78,25 @@ def train(conf, save_folder):
                         "UpDecoderBlock2D"
                     ])
                 ).to(device)
+
+        if initialization == 'only_D':
+            logging.info('Training VAE with only decoder weights of Hugginface model')
+            
+            model = AutoencoderKL.from_pretrained(
+            autoencoder_config['autoencoder_type'],
+            in_channels=dataset_config['im_channels'],
+            out_channels=dataset_config['im_channels'],
+            sample_size=dataset_config['im_size_h'],
+            block_out_channels=autoencoder_config['down_channels'],
+            low_cpu_mem_usage=False,
+            ignore_mismatched_sizes=True).to(device)
+
+            # Freeze the encoder by disabling gradient updates
+            for param in model.encoder.parameters():
+                param.requires_grad = False
+            
+            decoder_filter = filter(lambda p: p.requires_grad, model.parameters())
+            
         else:
             # pretrained weights
             logging.info('Training VAE with pretrained Hugginface model SDv1.5')
@@ -143,7 +162,11 @@ def train(conf, save_folder):
     discriminator = Discriminator(im_channels=dataset_config['im_channels']).to(device)
 
     optimizer_d = Adam(discriminator.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
-    optimizer_g = Adam(model.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
+    if initialization == 'only_D':
+        print('Only Decoder')
+        optimizer_g = Adam(decoder_filter, lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
+    else:
+        optimizer_g = Adam(model.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
 
     # Configuration of the training loop
     disc_step_start = train_config['disc_start'] * len(data) // train_config['autoencoder_batch_size']
