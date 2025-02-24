@@ -3,7 +3,7 @@ dataset_params:
   # local path: 
   #            1) "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"
   #            2) cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/ius_data/dataset'
-  dataset_path: "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"  
+  dataset_path: "/leonardo_work/IscrC_Med-LMGM/Angelo/ius_data/dataset"  
   im_channels : 1
   im_size_h : 256         # 256
   im_size_w : 256         # 256 
@@ -18,11 +18,11 @@ autoencoder_params:
    ## 'scratch' -> old version,
    ## '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default' -> architecture from huggingface
    ## cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'
-  autoencoder_type: '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'         
+  autoencoder_type: '/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'         
   ## 'random' -> random initialization, 
   ## 'SD1.5'  -> SD1.5 initialization,
-  ## 'only_D' -> E from SD1.5 and D pre-training
-  initialization: 'only_D'               ## 'random' -> random initialization, 'SD1.5' -> SD1.5 initialization
+  ## 'only_D' -> E from SD1.5 and D 
+  initialization: 'random'               ## 'random' -> random initialization, 'SD1.5' -> SD1.5 initialization
   z_channels: 4
   codebook_size : 20
   down_channels : [64, 128, 256, 256]    # original [128, 256, 512, 512] - small [64, 128, 256, 256]
@@ -90,7 +90,7 @@ train_params:
   seed : 1111
   ldm_batch_size: 8
   ldm_batch_size_sample: 32
-  autoencoder_batch_size: 2   # 2: local for shape (240,320) - 4 or 8: cineca for shape (240, 320)
+  autoencoder_batch_size: 8   # 2: local for shape (240,320) - 4 or 8: cineca for shape (240, 320)
   disc_start: 8
   disc_weight: 0.5
   codebook_weight: 1
