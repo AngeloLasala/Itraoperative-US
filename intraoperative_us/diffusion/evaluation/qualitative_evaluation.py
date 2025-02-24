@@ -258,15 +258,15 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, compute_real, comput
     ## plt the 2d scatter plot of tsne
     plt.figure(figsize=(10,10), num=f'iUS tsne model', tight_layout=True)   
 
-    plt.scatter(real_tsne[:,0], real_tsne[:,1], c='blue', label='Train data', s=60)
-    plt.scatter(val_tsne[:,0], val_tsne[:,1], c='green', label='Val data', s=60)
-    plt.scatter(gen_tsne[:,0], gen_tsne[:,1], c='lightgreen', label='Gen data', s=60)
+    plt.scatter(real_tsne[:,0], real_tsne[:,1], c='blue', label='Train data', s=100)
+    plt.scatter(val_tsne[:,0], val_tsne[:,1], c='green', label='Val data', s=100)
+    plt.scatter(gen_tsne[:,0], gen_tsne[:,1], c='lightgreen', label='Gen data', s=100)
 
-    plt.xlabel('TSNE 1', fontsize=22)
-    plt.ylabel('TSNE 2', fontsize=22)
-    plt.xticks(fontsize=20)
-    plt.yticks(fontsize=20)
-    plt.legend(fontsize=24)
+    plt.xlabel('TSNE 1', fontsize=30)
+    plt.ylabel('TSNE 2', fontsize=30)
+    plt.xticks(fontsize=30)
+    plt.yticks(fontsize=30)
+    # plt.legend(fontsize=34)
     plt.show()
 
 

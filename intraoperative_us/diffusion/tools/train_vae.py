@@ -79,7 +79,7 @@ def train(conf, save_folder):
                     ])
                 ).to(device)
 
-        if initialization == 'only_D':
+        elif initialization == 'only_D':
             logging.info('Training VAE with only decoder weights of Hugginface model')
             
             model = AutoencoderKL.from_pretrained(
