@@ -7,7 +7,9 @@ import torch.nn as nn
 from intraoperative_us.diffusion.models.blocks import get_time_embedding
 from intraoperative_us.diffusion.models.blocks import DownBlock, MidBlock, UpBlockUnet
 from intraoperative_us.diffusion.utils.utils import get_number_parameter
-# from utils.config_utils import *
+from diffusers import UNet2DConditionModel
+from intraoperative_us.diffusion.utils.utils import get_number_parameter
+
 
 def get_config_value(config, key, default_value):
     """
@@ -231,3 +233,19 @@ if __name__ == '__main__':
     out = model(x, t, {'image': mask_cond})
     get_number_parameter(model)
     print(out.shape)
+    get_number_parameter(model)
+
+    ## load 2D conditional unet model from diffuser
+    # unet = UNet2DConditionModel.from_pretrained("sd-legacy/stable-diffusion-v1-5", subfolder="unet", use_safetensors=True)
+    unet = UNet2DConditionModel.from_pretrained("unet_cond/UNet2DConditionModel_SD1.5_default",
+                                                addition_embed_type='image',
+                                                encoder_hid_dim=256,
+                                                low_cpu_mem_usage=False,
+                                                use_safetensors=True)
+    get_number_parameter(unet)
+    # unet.save_pretrained("unet_cond/UNet2DConditionModel_SD1.5_default")
+
+    
+    for k in unet.config.keys():
+        print(k, unet.config[k])
+    
