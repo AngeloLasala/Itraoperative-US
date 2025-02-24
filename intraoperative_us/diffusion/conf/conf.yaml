@@ -19,10 +19,10 @@ autoencoder_params:
    ## '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default' -> architecture from huggingface
    ## cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'
   autoencoder_type: '/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'         
-  initialization: 'random'               ## 'random' -> random initialization, 'SD1.5' -> SD1.5 initialization
+  initialization: 'no_random'               ## 'random' -> random initialization, 'SD1.5' -> SD1.5 initialization
   z_channels: 4
   codebook_size : 20
-  down_channels : [128, 256, 512, 512]    # original [128, 256, 512, 512] - small [64, 128, 256, 256]
+  down_channels : [64, 128, 256, 256]    # original [128, 256, 512, 512] - small [64, 128, 256, 256]
   mid_channels : [256, 256]
   down_sample : [True, True, True]
   attn_down : [False, False, False]
@@ -103,3 +103,5 @@ train_params:
   autoencoder_acc_steps : 1
   autoencoder_img_save_steps : 8
   save_frequency : 300
+  mixed_precision : config.mixed_precision,
+  gradient_accumulation_steps: config.gradient_accumulation_steps

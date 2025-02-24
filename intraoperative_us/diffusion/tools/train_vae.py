@@ -23,6 +23,7 @@ from diffusers import AutoencoderKL
 from intraoperative_us.diffusion.models.lpips import LPIPS
 from intraoperative_us.diffusion.models.discriminator import Discriminator
 from intraoperative_us.diffusion.utils.utils import get_number_parameter
+from accelerate import Accelerator
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -157,6 +158,22 @@ def train(conf, save_folder):
     losses_epoch = {'recon': [], 'kl': [], 'lpips': [], 'disc': [], 'gen': []}
     val_losses_epoch = {'recon': [], 'lpips': []}
 
+
+    ## here i have to add the accelerator
+    accelerator = Accelerator(
+        mixed_precision=train_config['mixed_precision'],
+        gradient_accumulation_steps=train_config['gradient_accumulation_steps']
+    )
+
+    print(accelerator.state)
+    print(accelerator.device)
+
+    # Wrap model, optimizer, and dataloaders
+    model, discriminator, optimizer_d, optimizer_g, data_loader, val_data_loader = accelerator.prepare(
+        model, discriminator, optimizer_d, optimizer_g, data_loader, val_data_loader
+    )
+
+
     for epoch_idx in range(num_epochs):
         time_start = time.time()
         recon_losses = []
@@ -219,7 +236,7 @@ def train(conf, save_folder):
             perceptual_losses.append(train_config['perceptual_weight'] * lpips_loss.item())
 
             g_loss += train_config['perceptual_weight'] * lpips_loss   
-            g_loss.backward()
+            accelerator.backward(g_loss)
             losses.append(g_loss.item())            
             ############################################################################
 
@@ -234,7 +251,7 @@ def train(conf, save_folder):
                                                 torch.ones(disc_real_pred.shape,device=disc_real_pred.device))
                 disc_loss = train_config['disc_weight'] * (disc_fake_loss + disc_real_loss) / 2
                 disc_losses.append(disc_loss.item())
-                disc_loss.backward()
+                accelerator.backward(disc_loss)
                 optimizer_d.step()
                 optimizer_d.zero_grad()
             ############################################################################
@@ -269,37 +286,40 @@ def train(conf, save_folder):
         # Track best performance, and save the model's state
         if np.mean(val_recon_losses) < best_vloss:
             best_vloss = np.mean(val_recon_losses)
-            torch.save(model.state_dict(), os.path.join(save_dir, f'vae_best_{epoch_idx+1}.pth'))
-            torch.save(discriminator.state_dict(), os.path.join(save_dir, f'discriminator_best_{epoch_idx+1}.pth'))
-        time_end = time.time()
-        # Print epoch
-        if len(disc_losses) > 0:
-            print(f'Epoch {epoch_idx+1}/{num_epochs}) Recon Loss: {np.mean(recon_losses):.4f}| KL Loss: {np.mean(kl_losses):.4f}| LPIPS Loss: {np.mean(perceptual_losses):.4f}| G Loss: {np.mean(gen_losses):.4f}| D Loss: {np.mean(disc_losses):.4f}')
-            print(f'Epoch {epoch_idx+1}/{num_epochs}) Valid Recon Loss: {np.mean(val_recon_losses):.4f}| Valid LPIPS Loss: {np.mean(val_perceptual_losses):.4f}')
-            total_time = time_end - time_start
-            print(f'Time: {total_time:4f} s\n')
-            losses_epoch['recon'].append(np.mean(recon_losses))
-            losses_epoch['kl'].append(np.mean(kl_losses))
-            losses_epoch['lpips'].append(np.mean(perceptual_losses))
-            losses_epoch['disc'].append(np.mean(disc_losses))
-            losses_epoch['gen'].append(np.mean(gen_losses))
+            if accelerator.is_main_process:
+                torch.save(model.state_dict(), os.path.join(save_dir, f'vae_best_{epoch_idx+1}.pth'))
+                torch.save(discriminator.state_dict(), os.path.join(save_dir, f'discriminator_best_{epoch_idx+1}.pth'))
+        
+        if accelerator.is_main_process:
+            time_end = time.time()
+            # Print epoch
+            if len(disc_losses) > 0:
+                print(f'Epoch {epoch_idx+1}/{num_epochs}) Recon Loss: {np.mean(recon_losses):.4f}| KL Loss: {np.mean(kl_losses):.4f}| LPIPS Loss: {np.mean(perceptual_losses):.4f}| G Loss: {np.mean(gen_losses):.4f}| D Loss: {np.mean(disc_losses):.4f}')
+                print(f'Epoch {epoch_idx+1}/{num_epochs}) Valid Recon Loss: {np.mean(val_recon_losses):.4f}| Valid LPIPS Loss: {np.mean(val_perceptual_losses):.4f}')
+                total_time = time_end - time_start
+                print(f'Time: {total_time:4f} s\n')
+                losses_epoch['recon'].append(np.mean(recon_losses))
+                losses_epoch['kl'].append(np.mean(kl_losses))
+                losses_epoch['lpips'].append(np.mean(perceptual_losses))
+                losses_epoch['disc'].append(np.mean(disc_losses))
+                losses_epoch['gen'].append(np.mean(gen_losses))
 
-            val_losses_epoch['recon'].append(np.mean(val_recon_losses))
-            val_losses_epoch['lpips'].append(np.mean(val_perceptual_losses))
-        else:
-            print(f'Epoch {epoch_idx+1}/{num_epochs}) Recon Loss: {np.mean(recon_losses):.4f}| KL Loss: {np.mean(kl_losses):.4f}| LPIPS Loss: {np.mean(perceptual_losses):.4f})')
-            print(f'Epoch {epoch_idx+1}/{num_epochs}) Valid Recon Loss: {np.mean(val_recon_losses):.4f}| Valid LPIPS Loss: {np.mean(val_perceptual_losses):.4f}')
-            total_time = time_end - time_start
-            print(f'Time: {total_time:.4f} s\n')
-            losses_epoch['recon'].append(np.mean(recon_losses))
-            losses_epoch['kl'].append(np.mean(kl_losses))
-            losses_epoch['lpips'].append(np.mean(perceptual_losses))
-            losses_epoch['disc'].append(0)
-            losses_epoch['gen'].append(0)
+                val_losses_epoch['recon'].append(np.mean(val_recon_losses))
+                val_losses_epoch['lpips'].append(np.mean(val_perceptual_losses))
+            else:
+                print(f'Epoch {epoch_idx+1}/{num_epochs}) Recon Loss: {np.mean(recon_losses):.4f}| KL Loss: {np.mean(kl_losses):.4f}| LPIPS Loss: {np.mean(perceptual_losses):.4f})')
+                print(f'Epoch {epoch_idx+1}/{num_epochs}) Valid Recon Loss: {np.mean(val_recon_losses):.4f}| Valid LPIPS Loss: {np.mean(val_perceptual_losses):.4f}')
+                total_time = time_end - time_start
+                print(f'Time: {total_time:.4f} s\n')
+                losses_epoch['recon'].append(np.mean(recon_losses))
+                losses_epoch['kl'].append(np.mean(kl_losses))
+                losses_epoch['lpips'].append(np.mean(perceptual_losses))
+                losses_epoch['disc'].append(0)
+                losses_epoch['gen'].append(0)
 
-            val_losses_epoch['recon'].append(np.mean(val_recon_losses))
-            val_losses_epoch['lpips'].append(np.mean(val_perceptual_losses))
-        plt.show()
+                val_losses_epoch['recon'].append(np.mean(val_recon_losses))
+                val_losses_epoch['lpips'].append(np.mean(val_perceptual_losses))
+            plt.show()
 
     # save json file of losses
     with open(os.path.join(save_dir, 'losses.json'), 'w') as f:
