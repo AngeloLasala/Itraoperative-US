@@ -117,9 +117,9 @@ preprocess = transforms.Compose(
     ]
 )
 
-# def transform(examples):
-#     images = [preprocess(image.convert("RGB")) for image in examples["image"]]
-#     return {"images": images}
+def transform(examples):
+    images = [preprocess(image.convert("RGB")) for image in examples["image"]]
+    return {"images": images}
 
 # dataset.set_transform(transform)
 # fig, axs = plt.subplots(1, 4, figsize=(16, 4))

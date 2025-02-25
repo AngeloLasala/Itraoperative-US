@@ -398,6 +398,69 @@ class GeneratedMaskDataset(torch.utils.data.Dataset):
         image = transforms.functional.to_tensor(image)
         return image
 
+class GenerateDataset(torch.utils.data.Dataset):
+    """
+    Dataset of generated image loaded from the path
+    """
+    def __init__(self, par_dir, trial, experiment, guide_w, epoch, size, input_channels,
+                 mask=False):
+        self.par_dir = par_dir
+        self.trial = trial
+        self.experiment = experiment
+        self.guide_w = guide_w
+        self.epoch = epoch
+        self.size = size
+        self.input_channels = input_channels
+        self.mask = mask
+
+        self.data_ius= self.get_eco_path()
+        self.files_data = [os.path.join(self.data_ius, f'x0_{i}.png') for i in range(len(os.listdir(self.data_ius)))]
+
+    def __len__(self):
+        return len(self.files_data)
+
+    def __getitem__(self, idx):
+        image_path = self.files_data[idx]
+
+        # read the image wiht PIL
+        image = Image.open(image_path)
+        resize = transforms.Resize(size=self.size)
+        image = resize(image)
+        if self.input_channels == 1: image = image.convert('L')
+        image = transforms.functional.to_tensor(image)
+        image = (2 * image) - 1 
+
+        if self.mask:
+            mask_numb = image_path.split('/')[-1].split('.')[0].split('_')[1]
+            mask_path = os.path.join(self.get_mask_images(), f'mask_{mask_numb}.png')
+            print(mask_path.split('/')[-1], image_path.split('/')[-1])
+            mask = Image.open(mask_path)
+            mask = resize(mask)
+            mask = mask.convert('L')
+            mask = transforms.functional.to_tensor(mask)
+
+            return image, mask
+
+        else: 
+            return image
+
+    def get_eco_path(self):
+        """
+        retrive the path 'eco' from current directory
+        """
+        data_ius = os.path.join(self.par_dir, self.trial, self.experiment, f'w_{self.guide_w}', f'samples_ep_{self.epoch}','ius')
+        return data_ius
+
+    def get_mask_images(self):
+        """
+        Return mask and generated images
+        """
+        data_mask = self.get_eco_path().split('/')[0:-1] + ['masks']
+        data_mask = os.path.join('/', *data_mask)
+    
+        return data_mask
+
+
 if __name__ == '__main__':
     current_directory = os.path.dirname(__file__)
     par_dir = os.path.dirname(current_directory)

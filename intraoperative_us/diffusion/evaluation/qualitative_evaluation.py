@@ -17,8 +17,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from intraoperative_us.diffusion.evaluation.investigate_vae import get_config_value, get_best_model
-# from intraoperative_us.diffusion.evaluation.hypertropy_eval import GenerateDataset
-from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
+from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS, GenerateDataset
 from intraoperative_us.diffusion.models.vae import VAE
 
 from sklearn.metrics import silhouette_score
@@ -31,50 +30,9 @@ from torchvision import transforms
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-class GenerateDataset(torch.utils.data.Dataset):
-    """
-    Dataset of generated image loaded from the path
-    """
-    def __init__(self, par_dir, trial, experiment, guide_w, epoch, size, input_channels):
-        self.par_dir = par_dir
-        self.trial = trial
-        self.experiment = experiment
-        self.guide_w = guide_w
-        self.epoch = epoch
-        self.size = size
-        self.input_channels = input_channels
-
-        self.data_ius= self.get_eco_path()
-        self.files_data = [os.path.join(self.data_ius, f'x0_{i}.png') for i in range(len(os.listdir(self.data_ius)))]
-
-    def __len__(self):
-        return len(self.files_data)
-
-    def __getitem__(self, idx):
-        image_path = self.files_data[idx]
-
-        # read the image wiht PIL
-        image = Image.open(image_path)
-        resize = transforms.Resize(size=self.size)
-        image = resize(image)
-        if self.input_channels == 1: image = image.convert('L')
-        image = transforms.functional.to_tensor(image)
-        image = (2 * image) - 1 
-
-        return image
-
-    def get_eco_path(self):
-        """
-        retrive the path 'eco' from current directory
-        """
-        data_ius = os.path.join(self.par_dir, self.trial, self.experiment, f'w_{self.guide_w}', f'samples_ep_{self.epoch}','ius')
-        return data_ius
-
-    def get_mask_images(self):
-        pass
 
 
-def infer(par_dir, conf, trial, experiment, epoch, guide_w, compute_real, compute_gen):
+def infer(par_dir, conf, trial, experiment, epoch, guide_w, compute_real, compute_gen, show_gen_mask):
     ######## Read the config file #######
     with open(conf, 'r') as file:
         try:
@@ -125,6 +83,24 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, compute_real, comput
     data_gen = GenerateDataset(par_dir, trial, experiment, guide_w, epoch, size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'])
     data_loader_gen = DataLoader(data_gen, batch_size=1, shuffle=False, num_workers=8)
     logging.info(f'len gen data {len(data_gen)}')
+
+    if show_gen_mask:
+        data_gen_mask = GenerateDataset(par_dir, trial, experiment, guide_w, epoch, 
+                                        size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'],
+                                        mask=True)
+        for i, (gen_img, mask) in enumerate(data_gen_mask):
+            ## plt the generated image and the mask
+            print(gen_img.shape, mask.shape)
+            plt.figure(figsize=(10,10), num=f'gen_mask_{i}', tight_layout=True)
+            plt.subplot(1,2,1)
+            plt.imshow(gen_img[0,:,:].cpu().numpy(), cmap='gray')
+            plt.title('Generated image')
+            plt.axis('off')
+            plt.subplot(1,2,2)
+            plt.imshow(mask[0,:,:].cpu().numpy(), cmap='gray')
+            plt.title('Mask')
+            plt.axis('off')
+            plt.show() 
 
 
     trial_folder = os.path.join(par_dir, trial)
@@ -285,6 +261,7 @@ if __name__ == '__main__':
     parser.add_argument('--epoch', type=int, default=99, help='epoch to sample, this is the epoch of cond ldm model') 
     parser.add_argument('--compute_encodings_real', action='store_true', help="compite the embeddings, default=False")
     parser.add_argument('--compute_encodings_gen', action='store_true', help="compite the embeddings, default=False")
+    parser.add_argument('--show_gen_mask', action='store_true', help="show the generative and mask images, default=False")
     parser.add_argument('--log', type=str, default='debug', help='Logging level')
     args = parser.parse_args()
 
@@ -299,5 +276,6 @@ if __name__ == '__main__':
 
 
     infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, 
-         experiment=args.experiment, epoch=args.epoch, guide_w=args.guide_w, compute_real=args.compute_encodings_real, compute_gen=args.compute_encodings_gen)
+         experiment=args.experiment, epoch=args.epoch, guide_w=args.guide_w, compute_real=args.compute_encodings_real, compute_gen=args.compute_encodings_gen,
+         show_gen_mask=args.show_gen_mask)
     plt.show()

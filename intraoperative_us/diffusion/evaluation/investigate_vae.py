@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
-from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
+from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS, IntraoperativeUS_mask
 from intraoperative_us.diffusion.models.vqvae import VQVAE
 from intraoperative_us.diffusion.models.vae import VAE
 from diffusers import AutoencoderKL
@@ -142,7 +142,7 @@ def plot_difference_matrix(original, out_1, out_2, out_3, out_4):
             ax[i, j].set_title(f'{label[i]} - {label[j]}', fontsize=20)
             ax[i, j].axis('off')
 
-def infer(par_dir, conf, trial, show_plot=False):
+def infer(par_dir, conf, trial, type_image, show_plot=False):
     ######## Read the config file #######
     with open(conf, 'r') as file:
         try:
@@ -155,17 +155,29 @@ def infer(par_dir, conf, trial, show_plot=False):
     initialization = autoencoder_config['initialization']
 
     # Create the dataset and dataloader
-    data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
-                               dataset_path= dataset_config['dataset_path'],
-                               im_channels= dataset_config['im_channels'],
-                               splitting_json=dataset_config['splitting_json'], 
-                               split='train',
-                               splitting_seed=dataset_config['splitting_seed'],
-                               train_percentage=dataset_config['train_percentage'],
-                               val_percentage=dataset_config['val_percentage'],
-                               test_percentage=dataset_config['test_percentage'],
-                               condition_config=config['autoencoder_params']['condition_config'],
-                               data_augmentation=False)
+    if type_image == 'ius':
+        data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+                                dataset_path= dataset_config['dataset_path'],
+                                im_channels= dataset_config['im_channels'],
+                                splitting_json=dataset_config['splitting_json'], 
+                                split='train',
+                                splitting_seed=dataset_config['splitting_seed'],
+                                train_percentage=dataset_config['train_percentage'],
+                                val_percentage=dataset_config['val_percentage'],
+                                test_percentage=dataset_config['test_percentage'],
+                                condition_config=config['autoencoder_params']['condition_config'],
+                                data_augmentation=False)
+    elif type_image == 'mask':
+        data = IntraoperativeUS_mask(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+                            dataset_path= dataset_config['dataset_path'],
+                            im_channels= dataset_config['im_channels'], 
+                            splitting_json=dataset_config['splitting_json'],
+                            split='train',
+                            splitting_seed=dataset_config['splitting_seed'],
+                            train_percentage=dataset_config['train_percentage'],
+                            val_percentage=dataset_config['val_percentage'],
+                            test_percentage=dataset_config['test_percentage'],
+                            data_augmentation=False)
     logging.info(f'len data {len(data)}')
     data_loader = DataLoader(data, batch_size=1, shuffle=False, num_workers=8)
 
@@ -370,5 +382,5 @@ if __name__ == '__main__':
     if 'vqvae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vqvae', 'config.yaml')
 
 
-    infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, show_plot=args.show_plot)
+    infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, type_image=args.type_image, show_plot=args.show_plot)
     plt.show()
