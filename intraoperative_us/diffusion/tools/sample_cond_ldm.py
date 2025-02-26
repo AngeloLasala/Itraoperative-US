@@ -20,7 +20,7 @@ from intraoperative_us.diffusion.models.vqvae import VQVAE
 from intraoperative_us.diffusion.models.vae import VAE 
 import intraoperative_us.diffusion.models.unet_cond_base as unet_cond_base
 import intraoperative_us.diffusion.models.unet_base as unet_base
-from intraoperative_us.diffusion.sheduler.scheduler import LinearNoiseScheduler
+from intraoperative_us.diffusion.scheduler.scheduler import LinearNoiseScheduler
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS, GeneratedMaskDataset
 from intraoperative_us.diffusion.tools.infer_vae import get_best_model
 from torch.utils.data import DataLoader

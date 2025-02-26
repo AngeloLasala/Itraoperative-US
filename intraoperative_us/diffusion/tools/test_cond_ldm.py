@@ -30,7 +30,7 @@ import echocardiography.diffusion.models.unet_base as unet_base
 from echocardiography.diffusion.models.vqvae import VQVAE
 from echocardiography.diffusion.models.cond_vae import condVAE
 from echocardiography.diffusion.models.vae import VAE 
-from echocardiography.diffusion.sheduler.scheduler import LinearNoiseScheduler
+from echocardiography.diffusion.scheduler.scheduler import LinearNoiseScheduler
 from echocardiography.diffusion.dataset.dataset import MnistDataset, EcoDataset, CelebDataset
 from echocardiography.diffusion.tools.infer_vae import get_best_model
 from torch.utils.data import DataLoader
