@@ -21,8 +21,7 @@ from sklearn.manifold import TSNE
 
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS, IntraoperativeUS_mask
 from intraoperative_us.diffusion.models.vqvae import VQVAE
-from intraoperative_us.diffusion.models.vae import VAE
-from diffusers import AutoencoderKL
+from intraoperative_us.diffusion.utils.utils import load_autoencoder
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -192,63 +191,7 @@ def infer(par_dir, conf, trial, type_image, show_plot=False):
         type_model = 'vae'
         logging.info(f'Load trained {os.listdir(trial_folder)[0]} model')
         best_model = get_best_model(os.path.join(trial_folder,'vae'))
-        logging.info(f'best model  epoch {best_model}\n')
-        if initialization == 'scratch':
-            vae = VAE(im_channels=dataset_config['im_channels'], model_config=autoencoder_config).to(device)
-            
-        else:
-            if initialization == 'random':
-                logging.info('Training VAE with random initialization of Hugginface model')
-                ## random initialization
-                vae = AutoencoderKL(
-                        in_channels=dataset_config['im_channels'],
-                        out_channels=dataset_config['im_channels'],
-                        sample_size=dataset_config['im_size_h'],
-                        block_out_channels=autoencoder_config['down_channels'],
-                        latent_channels=autoencoder_config.get('latent_channels', 4),  # Default is 4
-                        down_block_types=autoencoder_config.get('down_block_types', [
-                            "DownEncoderBlock2D",
-                            "DownEncoderBlock2D",
-                            "DownEncoderBlock2D",
-                            "DownEncoderBlock2D"
-                        ]),
-                        up_block_types=autoencoder_config.get('up_block_types', [
-                            "UpDecoderBlock2D",
-                            "UpDecoderBlock2D",
-                            "UpDecoderBlock2D",
-                            "UpDecoderBlock2D"
-                        ])
-                    ).to(device)
-
-            elif initialization == 'only_D':
-                logging.info('Training VAE with only decoder weights of Hugginface model')
-                
-                vae = AutoencoderKL.from_pretrained(
-                autoencoder_config['autoencoder_type'],
-                in_channels=dataset_config['im_channels'],
-                out_channels=dataset_config['im_channels'],
-                sample_size=dataset_config['im_size_h'],
-                block_out_channels=autoencoder_config['down_channels'],
-                low_cpu_mem_usage=False,
-                ignore_mismatched_sizes=True).to(device)
-
-                # Freeze the encoder by disabling gradient updates
-                for param in vae.encoder.parameters():
-                    param.requires_grad = False
-                
-                decoder_filter = filter(lambda p: p.requires_grad, vae.parameters())
-                
-            else:
-                # pretrained weights
-                logging.info('Training VAE with pretrained Hugginface model SDv1.5')
-                vae = AutoencoderKL.from_pretrained(
-                autoencoder_config['autoencoder_type'],
-                in_channels=dataset_config['im_channels'],
-                out_channels=dataset_config['im_channels'],
-                sample_size=dataset_config['im_size_h'],
-                block_out_channels=autoencoder_config['down_channels'],
-                low_cpu_mem_usage=False,
-                ignore_mismatched_sizes=True).to(device)
+        vae = load_autoencoder(autoencoder_config, dataset_config, device)
 
         vae.eval()
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vae', f'vae_best_{best_model}.pth'), map_location=device))
