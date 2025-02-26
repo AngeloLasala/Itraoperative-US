@@ -15,7 +15,7 @@ from intraoperative_us.diffusion.sheduler.scheduler import LinearNoiseScheduler
 from intraoperative_us.diffusion.models.vqvae import VQVAE
 from intraoperative_us.diffusion.models.vae import VAE 
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
-from intraoperative_us.diffusion.tools.infer_vae import get_best_model
+from intraoperative_us.diffusion.utils.utils import get_best_model, load_model
 from torch.utils.data import DataLoader
 import random
 import multiprocessing as mp
@@ -97,25 +97,6 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
     
     trial_folder = trial 
     assert os.listdir(trial_folder), f'No trained model found in trial folder {trial_folder}'
-
-    if 'cond_vae' in os.listdir(trial_folder):
-        ## Condition VAE + LDM
-        type_model = 'cond_vae'
-        logging.info(f'type model {type_model}')
-        logging.info(f'Load trained {os.listdir(trial_folder)[0]} model')
-        best_model = get_best_model(os.path.join(trial_folder,'cond_vae'))
-        logging.info(f'best model  epoch {best_model}')
-        vae = condVAE(im_channels=dataset_config['im_channels'], model_config=autoencoder_model_config, condition_config=condition_config).to(device)
-        vae.eval()
-        vae.load_state_dict(torch.load(os.path.join(trial_folder, 'cond_vae', f'vae_best_{best_model}.pth'), map_location=device))
-
-        ## unconditional ldm
-        if activate_cond_ldm:
-            model = unet_cond_base.Unet(im_channels=autoencoder_model_config['z_channels'], model_config=diffusion_model_config).to(device)
-            model.train()
-        else:
-            model = unet_base.Unet(im_channels=autoencoder_model_config['z_channels'], model_config=diffusion_model_config).to(device)
-            model.train()
 
 
     if 'vae' in os.listdir(trial_folder):

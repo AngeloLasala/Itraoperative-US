@@ -1,6 +1,19 @@
 import torch
 import logging
 
+def get_best_model(trial_folder):
+    """
+    Get the best model from the trial folder
+    """
+    best_model = 0
+
+    # in the folder give me only the file with extention '.pth'
+    for i in os.listdir(trial_folder):
+        if '.pth' in i and i.split('_')[0] == 'vae':
+            model = i.split('_')[-1].split('.')[0]
+            if int(model) > best_model:
+                best_model = int(model)
+    return best_model
 
 def get_number_parameter(model):
     """
