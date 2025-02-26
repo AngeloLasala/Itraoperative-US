@@ -14,7 +14,7 @@ import logging
 import numpy as np
 from tqdm import tqdm
 from intraoperative_us.diffusion.models.unet_base import Unet
-from intraoperative_us.diffusion.sheduler.scheduler import LinearNoiseScheduler
+from intraoperative_us.diffusion.scheduler.scheduler import LinearNoiseScheduler
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS, IntraoperativeUS_mask
 from intraoperative_us.diffusion.models.vqvae import VQVAE
 from intraoperative_us.diffusion.models.vae import VAE

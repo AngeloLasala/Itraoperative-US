@@ -51,6 +51,13 @@ autoencoder_params:
       cond_drop_prob : 0.1                 # probability of dropping class labels
 
 diffusion_params:
+  ## 'linear' -> my linear scheduler,
+  ## 'ddim'   -> DDIM scheduler form hugginface
+  ## 'pndm'   -> PNDM scheduler from hugginface 
+  scheduler: 'ddim'
+  ## local path: '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
+  ## cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
+  scheduler_path: /home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/scheduler/
   num_timesteps : 1000
   beta_start : 0.0015
   beta_end : 0.0195
