@@ -1,6 +1,6 @@
 import torch
 import logging
-import osW
+import os
 
 def get_best_model(trial_folder):
     """

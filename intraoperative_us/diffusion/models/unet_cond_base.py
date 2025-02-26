@@ -8,6 +8,7 @@ from intraoperative_us.diffusion.models.blocks import get_time_embedding
 from intraoperative_us.diffusion.models.blocks import DownBlock, MidBlock, UpBlockUnet
 from intraoperative_us.diffusion.utils.utils import get_number_parameter
 from diffusers import UNet2DConditionModel
+from transformers import CLIPTextModel, CLIPTokenizer
 from intraoperative_us.diffusion.utils.utils import get_number_parameter
 
 
@@ -242,6 +243,11 @@ if __name__ == '__main__':
                                                 encoder_hid_dim=256,
                                                 low_cpu_mem_usage=False,
                                                 use_safetensors=True)
+
+    tokenizer = CLIPTokenizer.from_pretrained("sd-legacy/stable-diffusion-v1-5", subfolder="tokenizer")
+    text_encoder = CLIPTextModel.from_pretrained("sd-legacy/stable-diffusion-v1-5", subfolder="text_encoder", use_safetensors=True)
+    tokenizer.save_pretrained("tokenizer/CLIPTokenizer")
+    text_encoder.save_pretrained("text_encoder/CLIPTextModel")
     get_number_parameter(unet)
     # unet.save_pretrained("unet_cond/UNet2DConditionModel_SD1.5_default")
 
