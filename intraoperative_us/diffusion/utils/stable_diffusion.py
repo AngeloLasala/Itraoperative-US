@@ -14,9 +14,7 @@ from tqdm.auto import tqdm
 ## load each element od SDM - VAE, TOKENIZER, TEXT_ENCODER, UNET, SCHEDULER
 vae = AutoencoderKL.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="vae", use_safetensors=True)
 tokenizer = CLIPTokenizer.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="tokenizer")
-text_encoder = CLIPTextModel.from_pretrained(
-    "CompVis/stable-diffusion-v1-4", subfolder="text_encoder", use_safetensors=True
-)
+text_encoder = CLIPTextModel.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="text_encoder", use_safetensors=True)
 unet = UNet2DConditionModel.from_pretrained(
     "CompVis/stable-diffusion-v1-4", subfolder="unet", use_safetensors=True
 )
