@@ -138,7 +138,7 @@ def train(conf, save_folder):
             im = im.float().to(device)
 
             #########################  Generator ################################
-            if autoencoder_type == 'scratch':
+            if autoencoder_config['autoencoder_type'] == 'scratch':
                 model_output = model(im)
                 output, encoder_out = model_output
                 mean, logvar = torch.chunk(encoder_out, 2, dim=1)
@@ -213,7 +213,7 @@ def train(conf, save_folder):
             for im in val_data_loader: #tqdm(val_data_loader): delate tqdm for cluster
                 im = im.float().to(device)
 
-                if autoencoder_type == 'scratch':
+                if autoencoder_config['autoencoder_type'] == 'scratch':
                     model_output = model(im)
                     output, encoder_out = model_output
                     mean, logvar = torch.chunk(encoder_out, 2, dim=1)
