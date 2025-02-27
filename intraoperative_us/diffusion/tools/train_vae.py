@@ -102,6 +102,7 @@ def train(conf, save_folder):
     discriminator = Discriminator(im_channels=dataset_config['im_channels']).to(device)
 
     optimizer_d = Adam(discriminator.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
+    initialization = autoencoder_config['initialization']
     if initialization == 'only_D':
         print('Only Decoder')
         optimizer_g = Adam(decoder_filter, lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
