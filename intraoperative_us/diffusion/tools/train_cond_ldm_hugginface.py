@@ -202,14 +202,6 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
 
             im = im.float()
 
-            # plt image and condition
-            import matplotlib.pyplot as plt
-            plt.figure()
-            plt.imshow(im[0].squeeze().cpu().numpy())
-            if cond_input is not None:
-                plt.figure()
-                plt.imshow(cond_input['image'][0].squeeze().cpu().numpy())
-
             #############  Handiling the condition input for cond LDM ########################################
             if 'image' in condition_types:
                 assert 'image' in cond_input, 'Conditioning Type Image but no image conditioning input present'
@@ -222,9 +214,6 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
                 latents = vae.encode(im.to(dtype=precision_dict[train_config['mixed_precision']])).latent_dist.sample()
                 latents = latents * vae.config.scaling_factor
 
-                plt.figure()
-                plt.imshow(latents[0][0].squeeze().cpu().numpy())
-                plt.show()
 
                 # Sample random noise
                 noise = torch.randn_like(im).to(device)
