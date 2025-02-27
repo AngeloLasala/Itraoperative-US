@@ -57,7 +57,6 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
     diffusion_config = config['diffusion_params']
     dataset_config = config['dataset_params']
     diffusion_model_config = config['ldm_params']
-    autoencoder_config = config['autoencoder_params']
     train_config = config['train_params']
     condition_config = get_config_value(diffusion_model_config, key='condition_config', default_value=None)
     if condition_config is not None:
@@ -120,6 +119,10 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
         type_model = 'vae'
         logging.info(f'type model {type_model}')
         logging.info(f'Load trained {os.listdir(trial_folder)[0]} model')
+        # read configuration file in this foleder
+        with open(os.path.join(trial_folder, 'vae', 'config.yaml'), 'r') as f:
+            autoencoder_config = yaml.safe_load(f)['autoencoder_params']
+
         best_model = get_best_model(os.path.join(trial_folder,'vae'))
         logging.info(f'best model  epoch {best_model}')
         vae = load_autoencoder(autoencoder_config, dataset_config, device)
@@ -199,6 +202,14 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
 
             im = im.float()
 
+            # plt image and condition
+            import matplotlib.pyplot as plt
+            plt.figure()
+            plt.imshow(im[0].squeeze().cpu().numpy())
+            if cond_input is not None:
+                plt.figure()
+                plt.imshow(cond_input['image'][0].squeeze().cpu().numpy())
+
             #############  Handiling the condition input for cond LDM ########################################
             if 'image' in condition_types:
                 assert 'image' in cond_input, 'Conditioning Type Image but no image conditioning input present'
@@ -210,6 +221,10 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
                 # Convert images to latent space, scalinf factor is used to scale the latent space with the scaling factor of the VAE
                 latents = vae.encode(im.to(dtype=precision_dict[train_config['mixed_precision']])).latent_dist.sample()
                 latents = latents * vae.config.scaling_factor
+
+                plt.figure()
+                plt.imshow(latents[0][0].squeeze().cpu().numpy())
+                plt.show()
 
                 # Sample random noise
                 noise = torch.randn_like(im).to(device)
