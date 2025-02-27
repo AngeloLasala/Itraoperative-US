@@ -26,9 +26,9 @@ from diffusers import UNet2DConditionModel
 from accelerate import Accelerator
 import torch.nn.functional as F
 
-from intraoperative_us.diffusion.models.unet_cond_base import get_config_value
-import intraoperative_us.diffusion.models.unet_cond_base as unet_cond_base
-import intraoperative_us.diffusion.models.unet_base as unet_base
+from intraoperative_us.diffusion.models.unet_cond_base import get_config_value, UNet2DConditionModelCostum
+# import intraoperative_us.diffusion.models.unet_cond_base as unet_cond_base, 
+# import intraoperative_us.diffusion.models.unet_base as unet_base
 from intraoperative_us.diffusion.scheduler.scheduler import LinearNoiseScheduler
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
 from intraoperative_us.diffusion.utils.utils import get_best_model, load_autoencoder, get_number_parameter
@@ -127,14 +127,15 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vae', f'vae_best_{best_model}.pth'), map_location=device))
 
     # Unet2DConditionModel
-    model = UNet2DConditionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['unet']),
-                                                sample_size=diffusion_model_config['sample_size'],
-                                                in_channels=autoencoder_config['z_channels'],
-                                                out_channels=autoencoder_config['z_channels'],
-                                                block_out_channels=diffusion_model_config['down_channels'],
-                                                low_cpu_mem_usage=False,
-                                                use_safetensors=True,
-                                                ignore_mismatched_sizes=True)
+    # model = UNet2DConditionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['unet']),
+    #                                             sample_size=diffusion_model_config['sample_size'],
+    #                                             in_channels=autoencoder_config['z_channels'],
+    #                                             out_channels=autoencoder_config['z_channels'],
+    #                                             block_out_channels=diffusion_model_config['down_channels'],
+    #                                             low_cpu_mem_usage=False,
+    #                                             use_safetensors=True,
+    #                                             ignore_mismatched_sizes=True)
+    model = UNet2DConditionModelCostum(diffusion_model_config)
     model.train()
 
     tokenizer = CLIPTokenizer.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['tokenizer']))
@@ -197,6 +198,13 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
                 im = data
 
             im = im.float()
+
+            #############  Handiling the condition input for cond LDM ########################################
+            if 'image' in condition_types:
+                assert 'image' in cond_input, 'Conditioning Type Image but no image conditioning input present'
+                cond_input_image = cond_input['image']
+                im_drop_prob = get_config_value(condition_config['image_condition_config'], 'cond_drop_prob', 0.)
+                cond_input['image'] = drop_image_condition(cond_input_image, im, im_drop_prob)
             
             with accelerator.accumulate(model):
                 # Convert images to latent space, scalinf factor is used to scale the latent space with the scaling factor of the VAE
@@ -235,7 +243,7 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
 
                # Predict the noise residual and compute loss or predict the velocity and compute loss
-                model_pred = model(noisy_latents, timesteps, encoder_hidden_states, return_dict=False)[0]
+                model_pred = model(noisy_latents, timesteps, encoder_hidden_states, cond_input)#return_dict=False)[0]
 
                 ## compute loss
                 loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
