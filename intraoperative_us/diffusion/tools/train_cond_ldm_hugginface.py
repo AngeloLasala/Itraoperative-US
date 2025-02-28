@@ -143,8 +143,8 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
 
     tokenizer = CLIPTokenizer.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['tokenizer']))
     text_encoder = CLIPTextModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['text_encoder']), use_safetensors=True)
-    def tokenize_captions():
-        captions = [""] * train_config['ldm_batch_size']
+    def tokenize_captions(current_batch_size):
+        captions = [""] * current_batch_size
         inputs = tokenizer(
             captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
         )
@@ -180,7 +180,7 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
     precision_dict = {"fp16": torch.float16, "bf16": torch.bfloat16, "float32": torch.float32}
     text_encoder.to(accelerator.device, dtype=precision_dict[train_config['mixed_precision']])
     vae.to(accelerator.device, dtype=precision_dict[train_config['mixed_precision']])
-    test_tokenized_captions = tokenize_captions().to(accelerator.device)
+    
 
     # Run training
     logging.info('Start training ...')
@@ -201,6 +201,8 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
                 im = data
 
             im = im.float()
+            test_tokenized_captions = tokenize_captions(im.shape[0]).to(accelerator.device)
+
 
             #############  Handiling the condition input for cond LDM ########################################
             if 'image' in condition_types:
