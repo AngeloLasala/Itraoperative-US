@@ -19,7 +19,7 @@ import multiprocessing as mp
 import time
 import logging
 
-from diffusers import DDIMScheduler, PNDMScheduler
+from diffusers import DDPMScheduler
 from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import UNet2DConditionModel
 # from diffusers.optimization import get_scheduler
@@ -91,24 +91,8 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
     data_loader = DataLoader(data_img, batch_size=train_config['ldm_batch_size'], shuffle=True, num_workers=8)
 
     #Create the model and scheduler
-    if diffusion_config['scheduler'] == 'linear':
-        logging.info('Linear scheduler')
-        scheduler = LinearNoiseScheduler(num_timesteps=diffusion_config['num_timesteps'],
-                                         beta_start=diffusion_config['beta_start'],
-                                         beta_end=diffusion_config['beta_end'])
-    elif diffusion_config['scheduler'] == 'ddim':
-        logging.info(f"{diffusion_config['scheduler']} scheduler")
-        scheduler = DDIMScheduler.from_pretrained(os.path.join(diffusion_config['scheduler_path'], diffusion_config['scheduler']),
-                                                  prediction_type=diffusion_config['prediction_type'])
-
-    elif diffusion_config['scheduler'] == 'pndm':
-        logging.info(f"{diffusion_config['scheduler']} scheduler")
-        scheduler = PNDMScheduler.from_pretrained(os.path.join(diffusion_config['scheduler_path'], diffusion_config['scheduler']),
-                                                  prediction_type=diffusion_config['prediction_type'])
-
-    else:
-        raise ValueError(f"Scheduler {diffusion_config['scheduler']} not implemented")
-
+    scheduler = DDPMScheduler(num_train_timesteps=diffusion_config['num_train_timesteps'])
+    print(scheduler.config)
 
     trial_folder = trial
     assert os.listdir(trial_folder), f'No trained model found in trial folder {trial_folder}'

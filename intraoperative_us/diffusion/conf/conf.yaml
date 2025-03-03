@@ -53,15 +53,18 @@ autoencoder_params:
       cond_drop_prob : 0.1                 # probability of dropping class labels
 
 diffusion_params:
+  # NOTE that the scheduler is only for the sampling
+  # we fic the DDPM scheduler for the training
   ## 'linear' -> my linear scheduler,
-  ## 'ddim'   -> DDIM scheduler form hugginface
-  ## 'pndm'   -> PNDM scheduler from hugginface 
+  ## 'ddim'   -> DDIM scheduler form hugginface - ONLY for sampling
+  ## 'pndm'   -> PNDM scheduler from hugginface - ONLY for sampling
   scheduler: 'pndm'
   ## local path: '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
   ## cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
   scheduler_path: /leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/scheduler/
   prediction_type: 'epsilon'     # v_prediction, epsilon
-  num_timesteps : 1000
+  num_sample_timesteps : 50
+  num_train_timesteps : 1000
   beta_start : 0.0015
   beta_end : 0.0195
   lr_scheduler: "costant"             # The scheduler type to use. Choose between ["linear", "cosine", "cosine_with_restarts", "polynomial",'"constant", "constant_with_warmup"

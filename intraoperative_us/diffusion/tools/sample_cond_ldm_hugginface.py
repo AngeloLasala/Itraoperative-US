@@ -12,7 +12,7 @@ import yaml
 import os
 import logging
 
-from diffusers import DDIMScheduler, PNDMScheduler
+from diffusers import DDIMScheduler, PNDMScheduler, UniPCMultistepScheduler
 from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import UNet2DConditionModel
 from accelerate import Accelerator
@@ -31,11 +31,14 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import cv2
 
+import tqdm as tqdm
+
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir,
+
+def sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir, tokenizer, text_encoder, 
            autoencoder_model_config, diffusion_config, dataset_config, type_model, vae, save_folder, mask_folder, ius_folder,
            guide_w, activate_cond_ldm):
     """
@@ -54,32 +57,17 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
         condition_types = condition_config['condition_types']
     logging.info(f"DIMENSION OF THE LATENT SPACE: {autoencoder_model_config['z_channels']}")
 
-    ## Load validation dataset
-    # data_img = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
-    #                            dataset_path= dataset_config['dataset_path'],
-    #                            im_channels= dataset_config['im_channels'],
-    #                            splitting_json=dataset_config['splitting_json'], 
-    #                            split='val',
-    #                            splitting_seed=dataset_config['splitting_seed'],
-    #                            train_percentage=dataset_config['train_percentage'],
-    #                            val_percentage=dataset_config['val_percentage'],
-    #                            test_percentage=dataset_config['test_percentage'],
-    #                            condition_config=condition_config,
-    #                            data_augmentation=False
-    #                            )
-    # ## Load Generated mask                    
-    # logging.info(f'len of the dataset: {len(data_img)}')
-    # data_loader = DataLoader(data_img, batch_size=train_config['ldm_batch_size_sample'], shuffle=False, num_workers=8)
+    def tokenize_captions(current_batch_size):
+        captions = [""] * current_batch_size
+        inputs = tokenizer(
+            captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
+        )
+        return inputs.input_ids
 
     data_img = GeneratedMaskDataset(par_dir = generated_mask_dir, size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'])
     data_loader = DataLoader(data_img, batch_size=train_config['ldm_batch_size_sample'], shuffle=False, num_workers=8)
     logging.info(f'len of the dataset: {len(data_img)}')
 
-    ## if the condition is 'text' i have to load the text model
-    if 'text' in condition_types:
-        text_configuration = condition_config['text_condition_config']
-        regression_model = data_img.get_model_embedding(text_configuration['text_embed_model'], text_configuration['text_embed_trial'])
-        regression_model.eval()
 
     for btc, data in enumerate(data_loader):
         cond_input = {}
@@ -96,63 +84,61 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
                       autoencoder_model_config['z_channels'],
                       im_size_h,
                       im_size_w)).to(device)
-
-        if 'text' in condition_types:
-            text_condition_input = cond_input['text'].to(device)
-            text_embedding = get_text_embeddeing(text_condition_input, regression_model, device).to(device)
-            cond_input['text'] = text_embedding
-        logging.info(cond_input[key].shape)
+        test_tokenized_captions = tokenize_captions(xt.shape[0]).to(device)
+        with torch.no_grad():
+            text_embeddings = text_encoder(test_tokenized_captions)[0]
         
         ################# Sampling Loop ########################
-        for i in reversed(range(diffusion_config['num_timesteps'])):
-            # Get prediction of noise
-            t = (torch.ones((xt.shape[0],)) * i).long().to(device)
+        # scheduler = UniPCMultistepScheduler.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="scheduler")
+        scheduler.set_timesteps(50)
+        print(scheduler[:10])
+        # for t in tqdm.tqdm(scheduler.timesteps):
+        #     xt = scheduler.scale_model_input(xt, timestep=t)
+        #     with torch.no_grad():
+        #         noise_pred_cond = model(xt, t, text_embeddings, cond_input)
+        #         noise_pred_uncond = model(xt, t, text_embeddings, uncond_input)            # ## get the noise prediction for the conditional and unconditional model
 
-            if type_model == 'vae':
-                ## get the noise prediction for the conditional and unconditional model
-                noise_pred_cond = model(xt, t, cond_input)
-                noise_pred_uncond = model(xt, t, uncond_input)
-
-                ## sampling the noise for the conditional and unconditional model
-                noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
-
-            if type_model == 'cond_vae':
-                if activate_cond_ldm:
-                    print('double conditional ldm')
-                    ## get the noise prediction for the conditional and unconditional model
-                    noise_pred_cond = model(xt, t, cond_input)
-                    noise_pred_uncond = model(xt, t, uncond_input)
-
-                    ## sampling the noise for the conditional and unconditional model
-                    noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
-
-                else:
-                    print('unconditional ldm')
-                    noise_pred = model(xt, t)
+        #     ## sampling the noise for the conditional and unconditional model
+        #     noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
+     
+        #     # Use scheduler to get x0 and xt-1
+        #     # xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
+        #     xt = scheduler.step(noise_pred, t, xt).prev_sample
+        #     print(t)
+        #     if t % 10 == t:
+        #         image = xt.cpu().numpy()[0][0]
+        #         print(image.shape, image.min(), image.max())
+        #         image = (image + 1.0) * 127.5
+        #         image = image.astype(np.uint8)
+        #         image_pil = Image.fromarray(image)
+        #         plt.figure(figsize=(10, 10), num=f"Latent at step {t}")
+        #         plt.imshow(image_pil)
+        #         plt.show()
             
-            # Use scheduler to get x0 and xt-1
-            xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
+        # xt = xt * (1 / vae.config.scaling_factor)
+
+        
             
-            # Save x0
-            if i == 0:
-                # Decode ONLY the final image to save time
-                if type_model == 'vae':
-                    ims = vae.decode(xt)
-                if type_model == 'cond_vae':
-                    for key in condition_types:  ## fake for loop., for now it is only one, get only one type of condition
-                        cond_input = cond_input[key].to(device)
-                    ims = vae.decode(xt, cond_input)
-                    pass
-            else:
-                ims = x0_pred
+        #    # Save x0
+        #     if i == 0:
+        #         # Decode ONLY the final image to save time
+        #         if type_model == 'vae':
+        #             ims = vae.decode(xt)
+        #         if type_model == 'cond_vae':
+        #             for key in condition_types:  ## fake for loop., for now it is only one, get only one type of condition
+        #                 cond_input = cond_input[key].to(device)
+        #             ims = vae.decode(xt, cond_input)
+        #             pass
+        #     else:
+        #         ims = x0_pred
             
-            ims = torch.clamp(ims, -1., 1.).detach().cpu()
-            ims = (ims + 1) / 2
-            mask = cond_input['image'].detach().cpu()
+        #     ims = torch.clamp(ims, -1., 1.).detach().cpu()
+        #     ims = (ims + 1) / 2
+        #     mask = cond_input['image'].detach().cpu()
     
-        for i in range(ims.shape[0]):
-            cv2.imwrite(os.path.join(ius_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
-            cv2.imwrite(os.path.join(mask_folder, f'mask_{btc * train_config["ldm_batch_size_sample"] + i}.png'), mask[i].numpy()[0]*255)
+        # for i in range(ims.shape[0]):
+        #     cv2.imwrite(os.path.join(ius_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
+        #     cv2.imwrite(os.path.join(mask_folder, f'mask_{btc * train_config["ldm_batch_size_sample"] + i}.png'), mask[i].numpy()[0]*255)
 
 def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, generated_mask_dir):
     # Read the config file #
@@ -203,13 +189,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
 
     ############# Load tokenizer and text model #################
     tokenizer = CLIPTokenizer.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['tokenizer']))
-    text_encoder = CLIPTextModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['text_encoder']), use_safetensors=True)
-    def tokenize_captions(current_batch_size):
-        captions = [""] * current_batch_size
-        inputs = tokenizer(
-            captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
-        )
-        return inputs.input_ids
+    text_encoder = CLIPTextModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['text_encoder']), use_safetensors=True).to(device)
     ###############################################
     
     ########## Load AUTOENCODER #############
@@ -241,25 +221,28 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
 
     #####################################
 
-    # ######### Create output directories #############
-    # save_folder = os.path.join(model_dir, f'w_{guide_w}', f'samples_ep_{epoch}')
-    # if not os.path.exists(save_folder):
-    #     os.makedirs(save_folder)
-    #     mask_folder = os.path.join(save_folder, 'masks')
-    #     os.makedirs(mask_folder)
-    #     ius_folder = os.path.join(save_folder, 'ius')
-    #     os.makedirs(ius_folder)
-    # else:
-    #     overwrite = input(f"The save folder {save_folder} already exists. Do you want to overwrite it? (y/n): ")
-    #     if overwrite.lower() != 'y':
-    #         print("Training aborted.")
-    #         exit()
+    ######### Create output directories #############
+    save_folder = os.path.join(model_dir, f'w_{guide_w}', f'samples_ep_{epoch}')
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
+        mask_folder = os.path.join(save_folder, 'masks')
+        os.makedirs(mask_folder)
+        ius_folder = os.path.join(save_folder, 'ius')
+        os.makedirs(ius_folder)
+    else:
+        overwrite = input(f"The save folder {save_folder} already exists. Do you want to overwrite it? (y/n): ")
+        if overwrite.lower() != 'y':
+            print("Training aborted.")
+            exit()
+        else:
+            mask_folder = os.path.join(save_folder, 'masks')
+            ius_folder = os.path.join(save_folder, 'ius')
     
-    # ######## Sample from the model 
-    # with torch.no_grad():
-    #     sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir,
-    #            autoencoder_config, diffusion_config, dataset_config, type_model, vae, save_folder, mask_folder, ius_folder,
-    #            guide_w, activate_cond_ldm)
+    ######## Sample from the model 
+    with torch.no_grad():
+        sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir, tokenizer, text_encoder,
+               autoencoder_config, diffusion_config, dataset_config, type_model, vae, save_folder, mask_folder, ius_folder,
+               guide_w, activate_cond_ldm)
 
 
 if __name__ == '__main__':
