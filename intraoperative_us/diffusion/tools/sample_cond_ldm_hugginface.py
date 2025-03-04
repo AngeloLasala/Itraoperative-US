@@ -91,54 +91,33 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
         ################# Sampling Loop ########################
         # scheduler = UniPCMultistepScheduler.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="scheduler")
         scheduler.set_timesteps(50)
-        print(scheduler[:10])
-        # for t in tqdm.tqdm(scheduler.timesteps):
-        #     xt = scheduler.scale_model_input(xt, timestep=t)
-        #     with torch.no_grad():
-        #         noise_pred_cond = model(xt, t, text_embeddings, cond_input)
-        #         noise_pred_uncond = model(xt, t, text_embeddings, uncond_input)            # ## get the noise prediction for the conditional and unconditional model
+        # print(scheduler.set_timesteps(50)[:10])
+        for t in tqdm.tqdm(scheduler.timesteps):
+            xt = scheduler.scale_model_input(xt, timestep=t)
+            
+            with torch.no_grad():
+                noise_pred_cond = model(xt, t, text_embeddings, cond_input)
+                noise_pred_uncond = model(xt, t, text_embeddings, uncond_input)            # ## get the noise prediction for the conditional and unconditional model
 
-        #     ## sampling the noise for the conditional and unconditional model
-        #     noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
+            ## sampling the noise for the conditional and unconditional model
+            noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
      
-        #     # Use scheduler to get x0 and xt-1
-        #     # xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
-        #     xt = scheduler.step(noise_pred, t, xt).prev_sample
-        #     print(t)
-        #     if t % 10 == t:
-        #         image = xt.cpu().numpy()[0][0]
-        #         print(image.shape, image.min(), image.max())
-        #         image = (image + 1.0) * 127.5
-        #         image = image.astype(np.uint8)
-        #         image_pil = Image.fromarray(image)
-        #         plt.figure(figsize=(10, 10), num=f"Latent at step {t}")
-        #         plt.imshow(image_pil)
-        #         plt.show()
-            
-        # xt = xt * (1 / vae.config.scaling_factor)
-
+            # Use scheduler to get x0 and xt-1
+            # xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
+            xt = scheduler.step(noise_pred, t, xt).prev_sample
+                    
+        xt = xt * (1 / vae.config.scaling_factor)
+        with torch.no_grad():
+            if type_model == 'vae':
+                ims = vae.decode(xt).sample
         
-            
-        #    # Save x0
-        #     if i == 0:
-        #         # Decode ONLY the final image to save time
-        #         if type_model == 'vae':
-        #             ims = vae.decode(xt)
-        #         if type_model == 'cond_vae':
-        #             for key in condition_types:  ## fake for loop., for now it is only one, get only one type of condition
-        #                 cond_input = cond_input[key].to(device)
-        #             ims = vae.decode(xt, cond_input)
-        #             pass
-        #     else:
-        #         ims = x0_pred
-            
-        #     ims = torch.clamp(ims, -1., 1.).detach().cpu()
-        #     ims = (ims + 1) / 2
-        #     mask = cond_input['image'].detach().cpu()
-    
-        # for i in range(ims.shape[0]):
-        #     cv2.imwrite(os.path.join(ius_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
-        #     cv2.imwrite(os.path.join(mask_folder, f'mask_{btc * train_config["ldm_batch_size_sample"] + i}.png'), mask[i].numpy()[0]*255)
+        ims = torch.clamp(ims, -1., 1.).detach().cpu()
+        ims = (ims + 1) / 2
+        mask = cond_input['image'].detach().cpu()
+
+        for i in range(ims.shape[0]):
+            cv2.imwrite(os.path.join(ius_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
+            cv2.imwrite(os.path.join(mask_folder, f'mask_{btc * train_config["ldm_batch_size_sample"] + i}.png'), mask[i].numpy()[0]*255)
 
 def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, generated_mask_dir):
     # Read the config file #
