@@ -16,7 +16,7 @@ for trial in trial_12; do
                         --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
                         --generated_mask_dir "/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion/mask/trial_1/ldm_1/w_-1.0/samples_ep_3000"\
                         --trial $trial\
-                        --experiment cond_ldm_12\
+                        --experiment cond_ldm_2\
                         --epoch $epoch\
                         --guide_w $w\
 
