@@ -18,7 +18,6 @@ for trial in trial_12; do
                         --trial $trial\
                         --experiment cond_ldm_12\
                         --epoch $epoch\
-                        --log warning\
                         --guide_w $w\
 
          done
