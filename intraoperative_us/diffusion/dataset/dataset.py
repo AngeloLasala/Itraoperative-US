@@ -367,7 +367,7 @@ class IntraoperativeUS_mask():
         ## Resize
         resize = transforms.Resize(size=self.size)
         label = resize(label)
-
+        
         ## convert to tensor and normalize
         label = transforms.functional.to_tensor(label)  
         return label

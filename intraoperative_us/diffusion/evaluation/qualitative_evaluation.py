@@ -65,7 +65,6 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, compute_real, comput
     logging.info(f'len train data {len(data_img)}')
     data_loader = DataLoader(data_img, batch_size=1, shuffle=False, num_workers=8)
 
-    # To Do: create the dataset and the dataloader of the generated images
     data_val = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
                                im_channels= dataset_config['im_channels'],
@@ -271,9 +270,6 @@ if __name__ == '__main__':
 
     experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial)
     if 'vae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vae', 'config.yaml')
-    if 'vqvae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vqvae', 'config.yaml')
-    if 'cond_vae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'cond_vae', 'config.yaml')
-
 
     infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, 
          experiment=args.experiment, epoch=args.epoch, guide_w=args.guide_w, compute_real=args.compute_encodings_real, compute_gen=args.compute_encodings_gen,
