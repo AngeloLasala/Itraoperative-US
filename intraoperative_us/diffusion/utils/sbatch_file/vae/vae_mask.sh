@@ -11,5 +11,7 @@
 
 python -m intraoperative_us.diffusion.tools.train_vae_mask --conf conf_mask\
                                                       --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
+                                                      --type_images 'mask'\
+                                                      --trial_name 'small_vae'\
                                                       --log 'warning'
  
