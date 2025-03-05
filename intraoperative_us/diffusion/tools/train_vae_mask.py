@@ -10,7 +10,6 @@ import numpy as np
 from tqdm import tqdm
 import json
 import yaml
-from intraoperative_us.diffusion.models.vae import VAE
 from intraoperative_us.diffusion.models.lpips import LPIPS
 from intraoperative_us.diffusion.models.discriminator import Discriminator
 from torch.utils.data.dataloader import DataLoader
@@ -19,11 +18,12 @@ from torch.optim import Adam
 import matplotlib.pyplot as plt
 import time
 import logging
+from intraoperative_us.diffusion.utils.utils import get_number_parameter, load_autoencoder
 from torchvision.utils import make_grid
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def train(conf, save_folder):
+def train(conf, save_folder, trial_name):
 
     with open(conf, 'r') as file:
         try:
@@ -44,10 +44,9 @@ def train(conf, save_folder):
         torch.cuda.manual_seed_all(seed)
     #############################
 
-    # Create the model and dataset #
-    model = VAE(im_channels=dataset_config['im_channels'],
-                  model_config=autoencoder_config).to(device)
-
+    # Load Autoencoder model
+    model = load_autoencoder(autoencoder_config, dataset_config, device)
+     
     data = IntraoperativeUS_mask(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                             dataset_path= dataset_config['dataset_path'],
                             im_channels= dataset_config['im_channels'], 
@@ -75,14 +74,22 @@ def train(conf, save_folder):
     val_data_loader = DataLoader(val_data, batch_size=train_config['autoencoder_batch_size'], shuffle=True, num_workers=4, timeout=10)
 
     # generate save folder
-    save_dir = os.path.join(save_folder,'mask')
+    save_dir = os.path.join(save_folder)
     if not os.path.exists(save_dir):
-        save_dir = os.path.join(save_dir, 'trial_1', 'vae')
-        os.makedirs(save_dir)
+        if trial_name is not None:
+            save_dir = os.path.join(save_dir, trial_name, 'vae')
+            os.makedirs(save_dir, exist_ok=True)
+        else:
+            save_dir = os.path.join(save_dir, 'trial_1', 'vae')
+            os.makedirs(save_dir)
     else:
-        current_trial = len(os.listdir(save_dir))
-        save_dir = os.path.join(save_dir, f'trial_{current_trial + 1}', 'vae')
-        os.makedirs(save_dir)
+        if trial_name is not None:
+            save_dir = os.path.join(save_dir, trial_name, 'vae')
+            os.makedirs(save_dir, exist_ok=True)
+        else:
+            current_trial = len(os.listdir(save_dir))
+            save_dir = os.path.join(save_dir, f'trial_{current_trial + 1}', 'vae')
+            os.makedirs(save_dir)
 
       
     # Create the loss and optimizer
@@ -127,9 +134,16 @@ def train(conf, save_folder):
             im = im.float().to(device)
 
             #########################  Generator ################################
-            model_output = model(im)
-            output, encoder_out = model_output
-            mean, logvar = torch.chunk(encoder_out, 2, dim=1) 
+            if autoencoder_config['autoencoder_type'] == 'scratch':
+                model_output = model(im)
+                output, encoder_out = model_output
+                mean, logvar = torch.chunk(encoder_out, 2, dim=1)
+            else:
+                encoder_out = model.encode(im)           # Encode image
+                mean = encoder_out.latent_dist.mean      # Mean of latent space
+                logvar = encoder_out.latent_dist.logvar  # Log-variance
+                output = model.decode(model.encode(im).latent_dist.sample()).sample
+
 
             # Image Saving Logic
             if step_count % image_save_steps == 0 or step_count == 1:
@@ -153,7 +167,7 @@ def train(conf, save_folder):
             g_loss = recon_loss + train_config['kl_weight'] * kl_loss
 
             if step_count > disc_step_start:
-                disc_fake_pred = discriminator(model_output[0])
+                disc_fake_pred = discriminator(output)
                 disc_fake_loss = disc_criterion(disc_fake_pred,
                                                 torch.ones(disc_fake_pred.shape,device=disc_fake_pred.device))
                 g_loss += train_config['disc_weight'] * disc_fake_loss 
@@ -194,10 +208,16 @@ def train(conf, save_folder):
             for im in val_data_loader: #tqdm(val_data_loader): delate tqdm for cluster
                 im = im.float().to(device)
                 
-                model_output = model(im)
-                output, encoder_out = model_output
-                mean, logvar = torch.chunk(encoder_out, 2, dim=1) 
-
+                if autoencoder_config['autoencoder_type'] == 'scratch':
+                    model_output = model(im)
+                    output, encoder_out = model_output
+                    mean, logvar = torch.chunk(encoder_out, 2, dim=1)
+                else:
+                    encoder_out = model.encode(im)  # Encode image
+                    mean = encoder_out.latent_dist.mean  # Mean of latent space
+                    logvar = encoder_out.latent_dist.logvar  # Log-variance
+                    output = model.decode(model.encode(im).latent_dist.sample()).sample
+                    
                 val_recon_loss = recon_criterion(output, im)
                 val_recon_losses.append(val_recon_loss.item())
 
@@ -280,6 +300,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train VAE on MNIST or CelebA-HQ')
     parser.add_argument('--conf', type=str, default='conf', help='yaml configuration file')  
     parser.add_argument('--save_folder', type=str, default='trained_model', help='folder to save the model, default = trained_model')
+    parser.add_argument('--type_images', type=str, default='mask', help='type of images to train')
+    parser.add_argument('--trial_name', type=str, default=None, help='name of the trial')
     parser.add_argument('--log', type=str, default='debug', help='Logging level')
     args = parser.parse_args()
 
@@ -292,5 +314,5 @@ if __name__ == '__main__':
     par_dir = os.path.dirname(current_directory)
 
     configuration = os.path.join(par_dir, 'conf', f'{args.conf}.yaml')
-    save_folder = os.path.join(par_dir, args.save_folder)
-    train(conf = configuration, save_folder = save_folder)
+    save_folder = os.path.join(par_dir, args.save_folder, args.type_images)
+    train(conf = configuration, save_folder = save_folder, trial_name = args.trial_name)
