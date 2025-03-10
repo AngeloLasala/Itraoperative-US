@@ -396,6 +396,7 @@ class GeneratedMaskDataset(torch.utils.data.Dataset):
         image = resize(image)
         if self.input_channels == 1: image = image.convert('L')
         image = transforms.functional.to_tensor(image)
+        image = (image > 0.5).float()
         return image
 
 class GenerateDataset(torch.utils.data.Dataset):
