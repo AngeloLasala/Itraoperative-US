@@ -200,6 +200,10 @@ def train(par_dir, conf, trial, type_image, experiment_name):
         # Save the model
         if (epoch_idx+1) % train_config['save_frequency'] == 0:
             torch.save(model.state_dict(), os.path.join(save_dir, f'ldm_{epoch_idx+1}.pth'))
+            if accelerator.is_main_process:
+                accelerate_folder = os.path.join(save_dir, f'accelerator_{epoch_idx+1}')
+                accelerator.save_state(accelerate_folder)
+    accelerator.end_training()
     
     print('Done Training ...')
     ## save the config file
