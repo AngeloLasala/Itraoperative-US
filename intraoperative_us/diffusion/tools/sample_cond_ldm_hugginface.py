@@ -79,8 +79,6 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
         else:
             pass
     
-        print(f'cond_input: {cond_input["image"].shape}')
-        print(f'min {cond_input["image"].min()} max {cond_input["image"].max()}')
         xt = torch.randn((cond_input[key].shape[0],
                       autoencoder_model_config['z_channels'],
                       im_size_h,
