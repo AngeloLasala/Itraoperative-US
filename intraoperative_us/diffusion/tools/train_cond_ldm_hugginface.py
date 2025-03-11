@@ -168,7 +168,6 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
 
     # Run training
     logging.info('Start training ...')
-    ## clear the gpu memory
     torch.cuda.empty_cache()
     for epoch_idx in range(num_epochs):
         train_loss = 0.0
@@ -200,9 +199,8 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
                 latents = vae.encode(im.to(dtype=precision_dict[train_config['mixed_precision']])).latent_dist.sample()
                 latents = latents * vae.config.scaling_factor
 
-
                 # Sample random noise
-                noise = torch.randn_like(im).to(device)
+                # noise = torch.randn_like(im).to(device)
                 noise = torch.randn_like(latents)
                 if False:#noise_offset_is_true: ## TO BE IMPLEMENTED
                     # https://www.crosslabs.org//blog/diffusion-with-offset-noise
