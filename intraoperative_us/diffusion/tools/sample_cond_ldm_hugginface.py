@@ -69,57 +69,57 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
     logging.info(f'len of the dataset: {len(data_img)}')
 
 
-    for btc, data in enumerate(data_loader):
-        cond_input = {}
-        uncond_input = {}
-        if condition_config is not None:
-            # im is the image (batch_size=8), cond_input is the conditional input ['image for the mask']
-            for key in condition_config['condition_types']: ## for all the type of condition, we move the  tensor on the device
-                cond_input[key] = data.to(device)
-                uncond_input[key] = torch.zeros_like(cond_input[key])
-        else:
-            pass
+    # for btc, data in enumerate(data_loader):
+    #     cond_input = {}
+    #     uncond_input = {}
+    #     if condition_config is not None:
+    #         # im is the image (batch_size=8), cond_input is the conditional input ['image for the mask']
+    #         for key in condition_config['condition_types']: ## for all the type of condition, we move the  tensor on the device
+    #             cond_input[key] = data.to(device)
+    #             uncond_input[key] = torch.zeros_like(cond_input[key])
+    #     else:
+    #         pass
     
-        print(f'cond_input: {cond_input["image"].shape}')
-        print(f'min {cond_input["image"].min()} max {cond_input["image"].max()}')
-        xt = torch.randn((cond_input[key].shape[0],
-                      autoencoder_model_config['z_channels'],
-                      im_size_h,
-                      im_size_w)).to(device)
-        test_tokenized_captions = tokenize_captions(xt.shape[0]).to(device)
-        with torch.no_grad():
-            text_embeddings = text_encoder(test_tokenized_captions)[0]
+    #     print(f'cond_input: {cond_input["image"].shape}')
+    #     print(f'min {cond_input["image"].min()} max {cond_input["image"].max()}')
+    #     xt = torch.randn((cond_input[key].shape[0],
+    #                   autoencoder_model_config['z_channels'],
+    #                   im_size_h,
+    #                   im_size_w)).to(device)
+    #     test_tokenized_captions = tokenize_captions(xt.shape[0]).to(device)
+    #     with torch.no_grad():
+    #         text_embeddings = text_encoder(test_tokenized_captions)[0]
         
-        ################# Sampling Loop ########################
-        # scheduler = UniPCMultistepScheduler.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="scheduler")
-        scheduler.set_timesteps(50)
-        # print(scheduler.set_timesteps(50)[:10])
-        for t in tqdm.tqdm(scheduler.timesteps):
-            xt = scheduler.scale_model_input(xt, timestep=t)
+    #     ################# Sampling Loop ########################
+    #     # scheduler = UniPCMultistepScheduler.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="scheduler")
+    #     scheduler.set_timesteps(50)
+    #     # print(scheduler.set_timesteps(50)[:10])
+    #     for t in tqdm.tqdm(scheduler.timesteps):
+    #         xt = scheduler.scale_model_input(xt, timestep=t)
             
-            with torch.no_grad():
-                noise_pred_cond = model(xt, t, text_embeddings, cond_input)
-                noise_pred_uncond = model(xt, t, text_embeddings, uncond_input)            # ## get the noise prediction for the conditional and unconditional model
+    #         with torch.no_grad():
+    #             noise_pred_cond = model(xt, t, text_embeddings, cond_input)
+    #             noise_pred_uncond = model(xt, t, text_embeddings, uncond_input)            # ## get the noise prediction for the conditional and unconditional model
 
-            ## sampling the noise for the conditional and unconditional model
-            noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
+    #         ## sampling the noise for the conditional and unconditional model
+    #         noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
      
-            # Use scheduler to get x0 and xt-1
-            # xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
-            xt = scheduler.step(noise_pred, t, xt).prev_sample
+    #         # Use scheduler to get x0 and xt-1
+    #         # xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
+    #         xt = scheduler.step(noise_pred, t, xt).prev_sample
                     
-        xt = xt * (1 / vae.config.scaling_factor)
-        with torch.no_grad():
-            if type_model == 'vae':
-                ims = vae.decode(xt).sample
+    #     xt = xt * (1 / vae.config.scaling_factor)
+    #     with torch.no_grad():
+    #         if type_model == 'vae':
+    #             ims = vae.decode(xt).sample
         
-        ims = torch.clamp(ims, -1., 1.).detach().cpu()
-        ims = (ims + 1) / 2
-        mask = cond_input['image'].detach().cpu()
+    #     ims = torch.clamp(ims, -1., 1.).detach().cpu()
+    #     ims = (ims + 1) / 2
+    #     mask = cond_input['image'].detach().cpu()
 
-        for i in range(ims.shape[0]):
-            cv2.imwrite(os.path.join(ius_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
-            cv2.imwrite(os.path.join(mask_folder, f'mask_{btc * train_config["ldm_batch_size_sample"] + i}.png'), mask[i].numpy()[0]*255)
+    #     for i in range(ims.shape[0]):
+    #         cv2.imwrite(os.path.join(ius_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
+    #         cv2.imwrite(os.path.join(mask_folder, f'mask_{btc * train_config["ldm_batch_size_sample"] + i}.png'), mask[i].numpy()[0]*255)
 
 def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, generated_mask_dir):
     # Read the config file #
