@@ -46,7 +46,7 @@ def drop_image_condition(image_condition, im, im_drop_prob):
         return image_condition
 
 
-def train(par_dir, conf, trial, activate_cond_ldm=False):
+def train(par_dir, conf, trial, experiment_name):
    # Read the config file #
     with open(conf, 'r') as file:
         try:
@@ -139,18 +139,25 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
     vae.requires_grad_(False)
     text_encoder.requires_grad_(False)
 
-    save_folder = os.path.join(trial_folder, 'cond_ldm_1')
+    save_folder = os.path.join(trial_folder)
     if not os.path.exists(save_folder):
-        save_folder = os.path.join(trial_folder, 'cond_ldm_1')
-        os.makedirs(save_folder)
+        if experiment_name is not None:
+            save_folder = os.path.join(trial_folder, experiment_name)
+            os.makedirs(save_folder, exist_ok=True)
+        else:
+            save_folder = os.path.join(save_folder, 'cond_ldm_1')
+            os.makedirs(save_folder)
     else:
-        ## count how many folder start with cond_ldm
-        count = 0
-        for folder in os.listdir(trial_folder):
-            if folder.startswith('cond_ldm'):
-                count += 1
-        save_folder = os.path.join(trial_folder, f'cond_ldm_{count+1}')
-        os.makedirs(save_folder)
+        if experiment_name is not None:
+            save_folder = os.path.join(trial_folder, experiment_name)
+            os.makedirs(save_folder, exist_ok=True)
+        else:
+            count = 0
+            for folder in os.listdir(trial_folder):
+                if folder.startswith('cond_ldm'):
+                    count += 1
+            save_folder = os.path.join(trial_folder, f'cond_ldm_{count+1}')
+            os.makedirs(save_folder)
 
     ## Prepare the training
     num_epochs = train_config['ldm_epochs']
@@ -251,10 +258,6 @@ def train(par_dir, conf, trial, activate_cond_ldm=False):
                 logs = {"loss": loss.detach().item()}
                 progress_bar.set_postfix(**logs)
 
-
-        ## save state with accelerator
-    #     # end of the epoch
-
         ## Validation - computation of the FID score between real images (train) and generated images (validation)
         # Real images: from the datasete loader of the training set
         # Generated images: from the dataset loader of the validation set on wich i apply the diffusion and the decoder
@@ -280,11 +283,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train unconditional LDM with VQVAE')
     parser.add_argument('--conf', type=str, default='eco', help='configuration file')
     parser.add_argument('--save_folder', type=str, default='trained_model', help='folder to save the model, default = trained_model')
+    parser.add_argument('--type_image', type=str, default='ius', help='type of image, ius or mri')
+    parser.add_argument('--experiment_name', type=str, default=None, help='name of the experiment, i.e., cond_ldm_1')
     parser.add_argument('--trial', type=str, default='trial_1', help='trial name, here you select the trained VAE to compute the latent space')
-    parser.add_argument('--cond_ldm', action='store_true', help="""Choose whether or not activate the conditional ldm. Id activate enable the combo condVAE + condLDM
-                                                                     Default=False that means
-                                                                     'cond_vae' -> cond VAE + unconditional LDM
-                                                                     'vae' -> VAE + conditional LDM""")
     parser.add_argument('--log', type=str, default='warning', help='Logging level')
     args = parser.parse_args()
 
@@ -296,8 +297,8 @@ if __name__ == '__main__':
     current_directory = os.path.dirname(__file__)
     par_dir = os.path.dirname(current_directory)
     configuration = os.path.join(par_dir, 'conf', f'{args.conf}.yaml')
-    # save_folder = os.path.join(args.save_folder, args.trial)
+
     train(par_dir = par_dir,
         conf = configuration,
-        trial = os.path.join(args.save_folder, 'ius', args.trial),
-        activate_cond_ldm=args.cond_ldm)
+        trial = os.path.join(args.save_folder, args.type_image, args.trial),
+        experiment_name = args.experiment_name)
