@@ -10,11 +10,11 @@
 #SBATCH --account=IscrC_Med-LMGM     # account name
 
 for trial in small_vae; do
-    for epoch in 200 400 600 800 1000 ; do
+    for epoch in 500 1000 1500 2000 2500 ; do
             python -m intraoperative_us.diffusion.tools.sample_ldm\
                     --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
                     --trial $trial\
-                    --experiment uncond_ldm\
+                    --experiment uncond_ldm_1\
                     --type_image mask\
                     --epoch $epoch\
 

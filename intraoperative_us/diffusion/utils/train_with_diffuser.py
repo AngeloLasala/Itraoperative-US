@@ -38,7 +38,7 @@ class TrainingConfig:
     save_image_epochs: int = 10
     save_model_epochs: int = 30
     mixed_precision: str = 'fp16'             # `no` for float32, `fp16` for automatic mixed precision
-    output_dir: str = 'betterfly'  # the model name locally and on the HF Hub
+    output_dir: str = 'butterflies'  # the model name locally and on the HF Hub
 
     push_to_hub: bool = False                  # whether to upload the saved model to the HF Hub
     hub_private_repo: bool = False  
@@ -70,7 +70,7 @@ def evaluate(config, epoch, pipeline):
 
 config = TrainingConfig()
 
-## load dataset - ius
+## load dataset 
 config.dataset_name = "huggan/smithsonian_butterflies_subset"
 dataset = load_dataset(config.dataset_name, split="train")
 print(dataset)
@@ -102,7 +102,7 @@ fig, axs = plt.subplots(1, 4, figsize=(16, 4), num='Example of preprocess images
 for i, image in enumerate(dataset[:4]["images"]):
     axs[i].imshow(image.permute(1, 2, 0).numpy() / 2 + 0.5)
     axs[i].set_axis_off()
-# plt.show()
+plt.show()
 
 
 # data loader
@@ -147,6 +147,8 @@ fig, axs = plt.subplots(1, 4, figsize=(16, 4), num='Adding noise with scheduler'
 for i, timesteps in enumerate([250, 500, 750, 999]):
     timesteps = torch.LongTensor([timesteps])
     noisy_image = noise_scheduler.add_noise(sample_image, noise, timesteps)
+    ## set title
+    axs[i].set_title(f"t={timesteps.item()}", fontsize=30)
     axs[i].imshow(noisy_image[0].permute(1, 2, 0).numpy() / 2 + 0.5)
     axs[i].axis('off')
 plt.show() 

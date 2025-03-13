@@ -56,7 +56,7 @@ def linear_fit_with_ci(x, y, label):
     logging.info(f'{label} 95% Confidence Interval for Slope: ({slope - t_ci_slope:.2f}, {slope + t_ci_slope:.2f})')
     logging.info(f'{label} 95% Confidence Interval for Intercept: ({intercept - t_ci_intercept:.2f}, {intercept + t_ci_intercept:.2f})')
 
-    return slope, t_ci_slope, intercept,  r_squared
+    return slope, t_ci_slope, intercept, t_ci_intercept, r_squared
 
 def fft_descriptor(mask, n_points=100, show_plot=False):
     """
@@ -199,7 +199,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, n_points, show_gen_m
         condition_types = condition_config['condition_types']
 
 
-    # Train dataset - mask
+    # Train dataset - REAL TUMOR MASK
     data_img = IntraoperativeUS_mask(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                             dataset_path= dataset_config['dataset_path'],
                             im_channels= dataset_config['im_channels'],
@@ -213,40 +213,78 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, n_points, show_gen_m
     logging.info(f'len train data {len(data_img)}')
     data_loader = DataLoader(data_img, batch_size=1, shuffle=False, num_workers=8)
 
-    # To Do: create the dataset and the dataloader of the generated images
-    generated_mask_dir = os.path.join(par_dir, trial, experiment, f'w_{guide_w}', f"samples_ep_{epoch}")
-    data_gen = GeneratedMaskDataset(par_dir = generated_mask_dir, size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'])
-    data_loader_gen = DataLoader(data_gen, batch_size=train_config['ldm_batch_size_sample'], shuffle=False, num_workers=8)
-    logging.info(f'len of the dataset: {len(data_gen)}')
-
     tumor_size_real, cent_x_real, centr_y_real, mean_dist_real, power_real = analyze_tumor_from_dataloader(data_loader, n_points, show_plot=show_gen_mask)
-    tumor_size_gen, cent_x_gen, centr_y_gen, mean_dist_gen, power_gen = analyze_tumor_from_dataloader(data_loader_gen, n_points, show_plot=show_gen_mask)
-
-    real_masks, gen_masks = [], []
+    real_masks = []
     for i, j, z in zip(tumor_size_real, mean_dist_real, power_real):
         if j is not None and z is not None and i is not None:
             real_masks.append([i, j, z])
-
-    for i, j, z in zip(tumor_size_gen, mean_dist_gen, power_gen):
-        if j is not None and z is not None and i is not None:
-            gen_masks.append([i, j, z])
-
     real_masks = np.array(real_masks)
-    gen_masks = np.array(gen_masks)
+    slope_real, t_ci_slope_real, intercept_real, t_ci_intercept_real,  r_squared_real = linear_fit_with_ci(np.log(real_masks[:,0]), np.log(real_masks[:,2]), 'Train data')
 
-    ## linear fir
-    slope_real, intercept_real, r_squared_real = linear_fit_with_ci(np.log(real_masks[:,0]), np.log(real_masks[:,2]), 'Train data')
-    slope_gen, intercept_gen, r_squared_gen = linear_fit_with_ci(np.log(gen_masks[:,0]), np.log(gen_masks[:,2]), 'Gen data')
+
+    ## ANALYSIS OVER EPOCHS - GENERATED TUMOR MASK
+    epochs_dict = {}
+    for ep in [400, 600, 800, 1000]:
+        ep_dict = {}
+        ## load data
+        generated_mask_dir = os.path.join(par_dir, trial, experiment, f'w_{guide_w}', f"samples_ep_{ep}")
+        data_gen = GeneratedMaskDataset(par_dir = generated_mask_dir, size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'])
+        data_loader_gen = DataLoader(data_gen, batch_size=train_config['ldm_batch_size_sample'], shuffle=False, num_workers=8)
+        logging.info(f'len of the dataset: {len(data_gen)}')
+
+        tumor_size_gen, cent_x_gen, centr_y_gen, mean_dist_gen, power_gen = analyze_tumor_from_dataloader(data_loader_gen, n_points, show_plot=show_gen_mask)
+
+        gen_masks = []
+        for i, j, z in zip(tumor_size_gen, mean_dist_gen, power_gen):
+            if j is not None and z is not None and i is not None:
+                gen_masks.append([i, j, z])
+        ep_dict['gen_mask'] = gen_masks
+
+        gen_masks = np.array(gen_masks)
+        slope_gen, t_ci_slope_gen, intercept_gen, t_ci_intercept_gen, r_squared_gen = linear_fit_with_ci(np.log(gen_masks[:,0]), np.log(gen_masks[:,2]), 'Gen data')
+        ep_dict['linear_fit'] = [slope_gen, t_ci_slope_gen, intercept_gen, t_ci_intercept_gen, r_squared_gen]
+        epochs_dict[ep] = ep_dict
+
+    ## Quantitative analisys
+    keys_list = list(epochs_dict.keys())
+
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20,10), num=f'Quantitative analysis', tight_layout=True)
+    ax[0].axhline(y=slope_real, color='blue', linestyle='--', lw=3, label='Train data')
+    ax[0].fill_between([keys_list[0], keys_list[-1]], slope_real - t_ci_slope_real, slope_real + t_ci_slope_real, color='blue', alpha=0.1)
+    ax[0].set_xlabel('Epochs', fontsize=30)
+    ax[0].set_ylabel('Slope', fontsize=30)
+    ax[0].tick_params(axis='both', which='major', labelsize=30)
+    ax[0].grid(linestyle=':')
+
+    ax[1].axhline(y=intercept_real, color='blue', linestyle='--', lw=3, label='Train data')
+    ax[1].fill_between([keys_list[0], keys_list[-1]], intercept_real - t_ci_intercept_real, intercept_real + t_ci_intercept_real, color='blue', alpha=0.1)
+    ax[1].set_xlabel('Epochs', fontsize=30)
+    ax[1].set_ylabel('Intercept', fontsize=30)
+    ax[1].tick_params(axis='both', which='major', labelsize=30)
+    ax[1].grid(linestyle=':')
+
+    slope_list = [epochs_dict[ep]['linear_fit'][0] for ep in epochs_dict.keys()]
+    intercept_list = [epochs_dict[ep]['linear_fit'][2] for ep in epochs_dict.keys()]
+    slope_ci_list = [epochs_dict[ep]['linear_fit'][1] for ep in epochs_dict.keys()]
+    intercept_ci_list = [epochs_dict[ep]['linear_fit'][3] for ep in epochs_dict.keys()]
+    ax[0].plot(keys_list, slope_list, c='lightgreen', lw=3, ls='--', marker='o', ms=30, label='Gen data')
+    ax[0].fill_between(keys_list, np.array(slope_list) - np.array(slope_ci_list), np.array(slope_list) + np.array(slope_ci_list), color='lightgreen', alpha=0.1)
+    ax[1].plot(keys_list, intercept_list, c='lightgreen', lw=3, ls='--',  marker='o', ms=30, label='Gen data')
+    ax[1].fill_between(keys_list, np.array(intercept_list) - np.array(intercept_ci_list), np.array(intercept_list) + np.array(intercept_ci_list), color='lightgreen', alpha=0.1)
 
     ######################## PLOT #################################################################
-
+    gen_masks = np.array(epochs_dict[epoch]['gen_mask'])
+    
     ## plt the 2d scatter plot of tsne
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20,10), num=f'MASK plos', tight_layout=True)
-    ax[0].scatter(real_masks[:,0], real_masks[:,1], c='blue', label='Train data', s=100)
-    ax[0].scatter(gen_masks[:,0], gen_masks[:,1], c='lightgreen', label='Gen data', s=100)
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20,10), num=f'MASK plots {epoch}', tight_layout=True)
+    bins = np.histogram_bin_edges(np.concatenate([real_masks[:,0], gen_masks[:,0]]), bins='auto')
+    stat, p = stats.ranksums(real_masks[:,0], gen_masks[:,0])
+    ## print the logging in the legend
+    ax[0].hist(real_masks[:,0], bins=bins, color='blue', label=f'Wilcoxon p-value={p:.4f}', alpha=0.5)
+    ax[0].hist(gen_masks[:,0],  bins=bins, color='lightgreen', label='Gen data', alpha=0.5)
     ax[0].set_xlabel('Tumor size', fontsize=30)
-    ax[0].set_ylabel('Mean D from centroid', fontsize=30)
     ax[0].tick_params(axis='both', which='major', labelsize=30)
+    ax[0].legend(fontsize=30)
     ax[0].grid(linestyle=':')
 
     ax[1].scatter(real_masks[:,0], real_masks[:,2], c='blue', label='Train data', s=100, alpha=0.6)
@@ -260,33 +298,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, n_points, show_gen_m
     ax[1].tick_params(axis='both', which='major', labelsize=30)
     ax[1].grid(linestyle=':')
     # plt.legend(fontsize=34)
-
-    # Create log-log plot
-    fig, ax = plt.subplots(figsize=(10, 8))
-
-    # Scatter data points
-    ax.scatter(real_masks[:, 0], real_masks[:, 1], c='blue', label='Train Data', s=100)
-    ax.scatter(gen_masks[:, 0], gen_masks[:, 1], c='lightgreen', label='Gen Data', s=100)
-
-    # Generate correctly spaced x values (log-spaced)
-    x_fit = np.logspace(np.log10(min(real_masks[:, 0])), np.log10(max(real_masks[:, 0])), 100)
-
-    # Compute y_fit using exponentiation
-    y_fit_real = np.exp(slope_real * np.log(x_fit) + intercept_real)
-
-    # Plot the fitted lines
-    ax.plot(x_fit, y_fit_real, 'b--', lw=3, label='Train Fit')
-
-    # Set log-log scale
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.set_xlabel('Tumor size', fontsize=20)
-    ax.set_ylabel('E(PSD)', fontsize=20)
-    ax.legend(fontsize=15)
-    ax.grid(True, which='both', linestyle=':')
     plt.show()
-    plt.show()
-
 
     #################################################################################################
 
