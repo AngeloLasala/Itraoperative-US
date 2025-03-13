@@ -13,5 +13,5 @@ python -m intraoperative_us.diffusion.tools.train_ldm --conf conf_mask\
           --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
           --trial small_vae\
           --type_image mask\
-          --experiment_name uncond_ldm\
+          --experiment_name uncond_ldm_1\
           --log info
