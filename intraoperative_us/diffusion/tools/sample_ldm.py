@@ -14,7 +14,7 @@ import logging
 import numpy as np
 from tqdm import tqdm
 
-from diffusers import DDIMScheduler, PNDMScheduler,  DDPMScheduler
+from diffusers import DDIMScheduler, PNDMScheduler,  DDPMScheduler, DPMSolverMultistepScheduler
 from diffusers import UNet2DModel
 from accelerate import Accelerator
 import torch.nn.functional as F
@@ -31,7 +31,7 @@ from torch.utils.data import DataLoader
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def sample(model, scheduler, train_config, diffusion_model_config, sampling_config,
+def sample(model, scheduler, train_config, sampling_config,
            autoencoder_model_config, diffusion_config, dataset_config, vae, save_folder):
     """
     Sample stepwise by going backward one timestep at a time.
@@ -56,7 +56,7 @@ def sample(model, scheduler, train_config, diffusion_model_config, sampling_conf
                         im_size_h,
                         im_size_w)).to(device)
 
-        # scheduler.set_timesteps(50) ## this for the pndm scheduler
+        # scheduler.set_timesteps(diffusion_config['num_sample_timesteps']) ## this for the pndm scheduler
         for t in tqdm(scheduler.timesteps):
             xt = scheduler.scale_model_input(xt, timestep=t)
 
@@ -112,6 +112,10 @@ def infer(par_dir, conf, trial, experiment, epoch, type_image):
         logging.info(f"{diffusion_config['scheduler']} scheduler")
         scheduler = DDPMScheduler(num_train_timesteps=diffusion_config['num_train_timesteps'])
 
+    elif diffusion_config['scheduler'] == 'dpm_solver':
+        logging.info(f"{diffusion_config['scheduler']} scheduler")
+        scheduler = DPMSolverMultistepScheduler()
+
     else:
         raise ValueError(f"Scheduler {diffusion_config['scheduler']} not implemented")
     ####################################################
@@ -143,7 +147,7 @@ def infer(par_dir, conf, trial, experiment, epoch, type_image):
 
 
     # Create output directories
-    save_folder = os.path.join(model_dir, f'w_-1.0', f'samples_ep_{epoch}')
+    save_folder = os.path.join(model_dir, f'w_-1.0', f"{diffusion_config['scheduler']}", f'samples_ep_{epoch}')
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
     else:
@@ -154,7 +158,7 @@ def infer(par_dir, conf, trial, experiment, epoch, type_image):
 
 
     with torch.no_grad():
-        sample(model, scheduler, train_config, diffusion_model_config, sampling_config,
+        sample(model, scheduler, train_config, sampling_config,
                autoencoder_model_config, diffusion_config, dataset_config, vae, save_folder)
 
 
