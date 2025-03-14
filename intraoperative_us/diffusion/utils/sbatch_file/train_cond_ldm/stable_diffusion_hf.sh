@@ -5,8 +5,8 @@
 #SBATCH --ntasks-per-node=1          # 1 tasks per node
 #SBATCH --time=18:00:00                 # time limits: 1 hour
 #SBATCH --partition=boost_usr_prod   # partition name
-#SBATCH --error=sd_uncond.err       # standard error file
-#SBATCH --output=sd_uncond.out      # standard output file
+#SBATCH --error=sd_uncond_1.err       # standard error file
+#SBATCH --output=sd_uncond_1.out      # standard output file
 #SBATCH --account=IscrC_Med-LMGM     # account name
 
 python -m intraoperative_us.diffusion.tools.train_stable_diffusion --conf conf_stable_diffusion\
