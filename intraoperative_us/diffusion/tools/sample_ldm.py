@@ -56,7 +56,7 @@ def sample(model, scheduler, train_config, sampling_config,
                         im_size_h,
                         im_size_w)).to(device)
 
-        # scheduler.set_timesteps(diffusion_config['num_sample_timesteps']) ## this for the pndm scheduler
+        scheduler.set_timesteps(diffusion_config['num_sample_timesteps']) ## this for the pndm scheduler
         for t in tqdm(scheduler.timesteps):
             xt = scheduler.scale_model_input(xt, timestep=t)
 

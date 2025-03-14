@@ -249,18 +249,19 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
     keys_list = list(epochs_dict.keys())
 
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20,10), num=f'Quantitative analysis', tight_layout=True)
-    ax[0].axhline(y=slope_real, color='blue', linestyle='--', lw=3, label='Train data')
+    ax[0].axhline(y=slope_real, color='blue', linestyle='-', lw=3, label='Train data')
     ax[0].fill_between([keys_list[0], keys_list[-1]], slope_real - t_ci_slope_real, slope_real + t_ci_slope_real, color='blue', alpha=0.1)
     ax[0].set_xlabel('Epochs', fontsize=30)
     ax[0].set_ylabel('Slope', fontsize=30)
     ax[0].tick_params(axis='both', which='major', labelsize=30)
     ax[0].grid(linestyle=':')
 
-    ax[1].axhline(y=intercept_real, color='blue', linestyle='--', lw=3, label='Train data')
+    ax[1].axhline(y=intercept_real, color='blue', linestyle='-', lw=3, label='Train data')
     ax[1].fill_between([keys_list[0], keys_list[-1]], intercept_real - t_ci_intercept_real, intercept_real + t_ci_intercept_real, color='blue', alpha=0.1)
     ax[1].set_xlabel('Epochs', fontsize=30)
     ax[1].set_ylabel('Intercept', fontsize=30)
     ax[1].tick_params(axis='both', which='major', labelsize=30)
+    ax[1].legend(fontsize=30)
     ax[1].grid(linestyle=':')
 
     slope_list = [epochs_dict[ep]['linear_fit'][0] for ep in epochs_dict.keys()]
@@ -269,9 +270,10 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
     intercept_ci_list = [epochs_dict[ep]['linear_fit'][3] for ep in epochs_dict.keys()]
     ax[0].plot(keys_list, slope_list, c='lightgreen', lw=3, ls='--', marker='o', ms=30, label='Gen data')
     ax[0].fill_between(keys_list, np.array(slope_list) - np.array(slope_ci_list), np.array(slope_list) + np.array(slope_ci_list), color='lightgreen', alpha=0.1)
+    ax[0].legend(fontsize=30)
     ax[1].plot(keys_list, intercept_list, c='lightgreen', lw=3, ls='--',  marker='o', ms=30, label='Gen data')
     ax[1].fill_between(keys_list, np.array(intercept_list) - np.array(intercept_ci_list), np.array(intercept_list) + np.array(intercept_ci_list), color='lightgreen', alpha=0.1)
-
+    ax[1].legend(fontsize=30)
     ######################## PLOT #################################################################
     gen_masks = np.array(epochs_dict[epoch]['gen_mask'])
     
@@ -289,15 +291,15 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
 
     ax[1].scatter(real_masks[:,0], real_masks[:,2], c='blue', label='Train data', s=100, alpha=0.6)
     ax[1].scatter(gen_masks[:,0], gen_masks[:,2], c='lightgreen', label='Gen data', s=100, alpha=0.6)
-    ax[1].plot(real_masks[:,0], np.exp(slope_real * np.log(real_masks[:,0]) + intercept_real), c='blue', ls='-',  lw=3, label='Train Fit')
-    ax[1].plot(gen_masks[:,0], np.exp(slope_gen * np.log(gen_masks[:,0]) + intercept_gen), c='lightgreen', ls='-', lw=3, label='Gen Fit')
+    ax[1].plot(real_masks[:,0], np.exp(slope_real * np.log(real_masks[:,0]) + intercept_real), c='blue', ls='-',  lw=3, label='Fit train data')
+    ax[1].plot(gen_masks[:,0], np.exp(slope_gen * np.log(gen_masks[:,0]) + intercept_gen), c='lightgreen', ls='-', lw=3, label='Fit gen data')
     ax[1].set_yscale('log')
     ax[1].set_xscale('log')
     ax[1].set_xlabel('Tumor size', fontsize=30)
     ax[1].set_ylabel('E(PSD)', fontsize=30)
     ax[1].tick_params(axis='both', which='major', labelsize=30)
+    ax[1].legend(fontsize=30)
     ax[1].grid(linestyle=':')
-    # plt.legend(fontsize=34)
     plt.show()
 
     #################################################################################################
