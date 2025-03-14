@@ -181,7 +181,7 @@ def analyze_tumor_from_dataloader(dataloader, n_points, show_plot):
 
     return tumpr_size_list, centroid_x_list, centroid_y_list, mean_distances_list, power_list
 
-def infer(par_dir, conf, trial, experiment, epoch, guide_w, n_points, show_gen_mask):
+def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_points, show_gen_mask):
     ######## Read the config file #######
     with open(conf, 'r') as file:
         try:
@@ -224,10 +224,10 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, n_points, show_gen_m
 
     ## ANALYSIS OVER EPOCHS - GENERATED TUMOR MASK
     epochs_dict = {}
-    for ep in [400, 600, 800, 1000]:
+    for ep in [500, 1000, 1500, 2000, 2500, 3000]:
         ep_dict = {}
         ## load data
-        generated_mask_dir = os.path.join(par_dir, trial, experiment, f'w_{guide_w}', f"samples_ep_{ep}")
+        generated_mask_dir = os.path.join(par_dir, trial, experiment, f'w_{guide_w}', scheduler_type, f"samples_ep_{ep}")
         data_gen = GeneratedMaskDataset(par_dir = generated_mask_dir, size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'])
         data_loader_gen = DataLoader(data_gen, batch_size=train_config['ldm_batch_size_sample'], shuffle=False, num_workers=8)
         logging.info(f'len of the dataset: {len(data_gen)}')
@@ -312,6 +312,7 @@ if __name__ == '__main__':
     parser.add_argument('--experiment', type=str, default='cond_ldm', help="""name of expermient, it is refed to the type of condition and in general to the
                                                                               hyperparameters (file .yaml) that is used for the training, it can be cond_ldm, cond_ldm_2, """)
     parser.add_argument('--guide_w', type=float, default=0.0, help='guide_w for the conditional model, w=-1 [unconditional], w=0 [vanilla conditioning], w>0 [guided conditional]')
+    parser.add_argument('--scheduler_type', type=str, default='ddpm', help='scheduler for the diffusion model')
     parser.add_argument('--epoch', type=int, default=99, help='epoch to sample, this is the epoch of cond ldm model')
     parser.add_argument('--n_points', type=int, default=100, help='number of points to sample the mask')
     parser.add_argument('--show_gen_mask', action='store_true', help="show the generative and mask images, default=False")
@@ -326,6 +327,6 @@ if __name__ == '__main__':
     if 'vae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vae', 'config.yaml')
 
     infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial,
-         experiment=args.experiment, epoch=args.epoch, guide_w=args.guide_w, n_points=args.n_points,
+         experiment=args.experiment, epoch=args.epoch, guide_w=args.guide_w, scheduler_type=args.scheduler_type, n_points=args.n_points,
          show_gen_mask=args.show_gen_mask)
     plt.show()
