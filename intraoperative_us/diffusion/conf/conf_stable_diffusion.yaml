@@ -95,7 +95,7 @@ ldm_params:
   num_up_layers : 2
   cross_attention_dim : 768
   condition_config:                         ## conditional type is both for CFG and ControlNET
-    condition_types: []                         ## dropout probability - CFG > 0.0, (original) ControlNET = 0.0
+    condition_types: ['image']                         ## dropout probability - CFG > 0.0, (original) ControlNET = 0.0
     image_condition_config:        
       image_condition_input_channels: 1     # total number of spatial channels in the segmentation maps
       image_condition_output_channels: 4
