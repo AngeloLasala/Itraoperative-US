@@ -13,5 +13,5 @@ python -m intraoperative_us.diffusion.tools.train_stable_diffusion --conf conf_s
           --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
           --trial trial_SD_random\
           --type_image ius\
-          --experiment SD_init_random_cond_empty_test\
+          --experiment SD_init_random_cond_image\
           --log warning\
