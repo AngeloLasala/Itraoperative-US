@@ -58,7 +58,7 @@ diffusion_params:
   ## 'linear' -> my linear scheduler,
   ## 'ddim'   -> DDIM scheduler form hugginface - ONLY for sampling
   ## 'pndm'   -> PNDM scheduler from hugginface - ONLY for sampling
-  scheduler: 'pndm'
+  scheduler: 'ddpm'
   ## local path: '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
   ## cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
   scheduler_path: /home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/scheduler/

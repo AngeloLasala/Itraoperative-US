@@ -5,8 +5,6 @@ The aim pf the script is to make the training as general as possible to do
 - MSE training: conditional LDM training with simple MSE with ControlNET as
                 backbone model for the perceptual training
 - MSE + Perceptual: conditional LDM training with perceptual loss without CFG
-
-To DO: make this model general also for costum model
 """
 import torch
 import yaml
@@ -22,23 +20,21 @@ import logging
 from diffusers import DDPMScheduler
 from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import UNet2DConditionModel
-# from diffusers.optimization import get_scheduler
 from accelerate import Accelerator
 import torch.nn.functional as F
 
 from intraoperative_us.diffusion.models.unet_cond_base import get_config_value, UNet2DConditionModelCostum
-# import intraoperative_us.diffusion.models.unet_cond_base as unet_cond_base, 
-# import intraoperative_us.diffusion.models.unet_base as unet_base
 from intraoperative_us.diffusion.scheduler.scheduler import LinearNoiseScheduler
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
 from intraoperative_us.diffusion.utils.utils import get_best_model, load_autoencoder, get_number_parameter
 from torch.utils.data import DataLoader
 
-# mp.set_start_method('spawn', force=True)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# torch.cuda.empty_cache()
 
 def drop_image_condition(image_condition, im, im_drop_prob):
+    """
+    Classifier-free guidelines. Dropping the condition image with a certain probability
+    """
     if im_drop_prob > 0:
         im_drop_mask = torch.zeros((im.shape[0], 1, 1, 1), device=im.device).float().uniform_(0,1) > im_drop_prob
         return image_condition * im_drop_mask
@@ -92,25 +88,22 @@ def train(par_dir, conf, trial, experiment_name):
 
     #Create the model and scheduler
     scheduler = DDPMScheduler(num_train_timesteps=diffusion_config['num_train_timesteps'])
-    print(scheduler.config)
 
     trial_folder = trial
     assert os.listdir(trial_folder), f'No trained model found in trial folder {trial_folder}'
-
 
     if 'vae' in os.listdir(trial_folder):
         ## VAE + conditional LDM
         type_model = 'vae'
         logging.info(f'type model {type_model}')
         logging.info(f'Load trained {os.listdir(trial_folder)[0]} model')
-        # read configuration file in this foleder
+        # read configuration file in selected folder
         with open(os.path.join(trial_folder, 'vae', 'config.yaml'), 'r') as f:
             autoencoder_config = yaml.safe_load(f)['autoencoder_params']
 
         best_model = get_best_model(os.path.join(trial_folder,'vae'))
         logging.info(f'best model  epoch {best_model}')
         vae = load_autoencoder(autoencoder_config, dataset_config, device)
-        # vae.eval()
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vae', f'vae_best_{best_model}.pth'), map_location=device))
 
     # Unet2DConditionModel
@@ -125,6 +118,7 @@ def train(par_dir, conf, trial, experiment_name):
     model = UNet2DConditionModelCostum(diffusion_model_config)
     model.train()
 
+    ## TEXT conditioning with CLIP text model
     tokenizer = CLIPTokenizer.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['tokenizer']))
     text_encoder = CLIPTextModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['text_encoder']), use_safetensors=True)
     def tokenize_captions(current_batch_size):
