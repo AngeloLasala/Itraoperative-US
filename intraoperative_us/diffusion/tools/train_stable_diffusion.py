@@ -23,8 +23,10 @@ import torch.nn.functional as F
 from intraoperative_us.diffusion.models.unet_cond_base import get_config_value
 from intraoperative_us.diffusion.scheduler.scheduler import LinearNoiseScheduler
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
-from intraoperative_us.diffusion.utils.utils import get_best_model, load_autoencoder, get_number_parameter
+from intraoperative_us.diffusion.utils.utils import get_best_model, load_autoencoder, load_unet_model, get_number_parameter
 from torch.utils.data import DataLoader
+
+from transformers import CLIPVisionConfig, CLIPVisionModel, CLIPImageProcessor
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -85,6 +87,8 @@ def train(par_dir, conf, trial, experiment_name):
 
     #Create the model and scheduler
     scheduler = DDPMScheduler(num_train_timesteps=diffusion_config['num_train_timesteps'])
+    ## print the configuration file of the scheduler
+    logging.info(f'Scheduler configuration: {scheduler.config}')
 
     trial_folder = trial
     assert os.listdir(trial_folder), f'No trained model found in trial folder {trial_folder}'
@@ -104,25 +108,22 @@ def train(par_dir, conf, trial, experiment_name):
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vae', f'vae_best_{best_model}.pth'), map_location=device))
 
     # Unet2DConditionModel
-    model = UNet2DConditionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['unet']),
-                                                sample_size=diffusion_model_config['sample_size'],
-                                                in_channels=autoencoder_config['z_channels'],
-                                                out_channels=autoencoder_config['z_channels'],
-                                                block_out_channels=diffusion_model_config['down_channels'],
-                                                low_cpu_mem_usage=False,
-                                                use_safetensors=True,
-                                                ignore_mismatched_sizes=True)
+    model = load_unet_model(diffusion_model_config, autoencoder_config, dataset_config, device)
     model.train()
 
-    # ## TEXT conditioning with CLIP text model
-    # tokenizer = CLIPTokenizer.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['tokenizer']))
-    # text_encoder = CLIPTextModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['text_encoder']), use_safetensors=True)
-    # def tokenize_captions(current_batch_size):
-    #     captions = [""] * current_batch_size
-    #     inputs = tokenizer(
-    #         captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
-    #     )
-    #     return inputs.input_ids
+    ## TEXT conditioning with CLIP text model
+    tokenizer = CLIPTokenizer.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['tokenizer']))
+    text_encoder = CLIPTextModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['text_encoder']), use_safetensors=True)
+    def tokenize_captions(current_batch_size):
+        captions = [""] * current_batch_size
+        inputs = tokenizer(
+            captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
+        )
+        return inputs.input_ids
+
+    ## IMAGE conditioning with CLIP image model
+    clip_vision_model = CLIPVisionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['clip_vision_model']))
+    image_processor = CLIPImageProcessor.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['image_processor']))
     
 
     # ## freeze the VAE and the text encoder for saving memory

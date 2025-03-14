@@ -165,9 +165,6 @@ def load_unet_model(diffusion_model_config, autoencoder_config, dataset_config, 
             in_channels=autoencoder_config['z_channels'],
             out_channels=autoencoder_config['z_channels'],
             block_out_channels=diffusion_model_config['down_channels'],
-            low_cpu_mem_usage=False,
-            use_safetensors=True,
-            ignore_mismatched_sizes=True
         ).to(device)
 
     elif initialization == 'SDv1.5':
