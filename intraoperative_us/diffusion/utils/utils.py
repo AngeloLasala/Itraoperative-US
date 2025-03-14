@@ -165,9 +165,11 @@ def load_unet_model(diffusion_model_config, autoencoder_config, dataset_config, 
             in_channels=autoencoder_config['z_channels'],
             out_channels=autoencoder_config['z_channels'],
             block_out_channels=diffusion_model_config['down_channels'],
+            cross_attention_dim=diffusion_model_config['cross_attention_dim'],
+
         ).to(device)
 
-    elif initialization == 'SDv1.5':
+    elif initialization == 'SD1.5':
         logging.info('Training UNet with pretrained Hugginface model SDv1.5')
         model = UNet2DConditionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['unet']),
                                                 sample_size=diffusion_model_config['sample_size'],
