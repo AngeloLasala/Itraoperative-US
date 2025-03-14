@@ -111,10 +111,6 @@ def train(par_dir, conf, trial, experiment_name):
     model = load_unet_model(diffusion_model_config, autoencoder_config, dataset_config, device)
     model.train()
 
-    for k in model.config.keys():
-        print(k, model.config[k])
-
-
     ## TEXT conditioning with CLIP text model
     tokenizer = CLIPTokenizer.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['tokenizer']))
     text_encoder = CLIPTextModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['text_encoder']), use_safetensors=True)
@@ -193,8 +189,9 @@ def train(par_dir, conf, trial, experiment_name):
                 assert 'image' in cond_input, 'Conditioning Type Image but no image conditioning input present'
                 cond_input_image = cond_input['image']
                 im_drop_prob = get_config_value(condition_config['image_condition_config'], 'cond_drop_prob', 0.)
-                cond_input['image'] = drop_image_condition(cond_input_image, im, im_drop_prob)
-            
+                cond_input['image'] = drop_image_condition(cond_input_image, im, im_drop_prob).repeat(1,3,1,1)
+                cond_input_mask = image_processor(images=cond_input['image'], return_tensors="pt", do_rescale=False).pixel_values.to(accelerator.device)
+       
             with accelerator.accumulate(model):
                 # Convert images to latent space, scalinf factor is used to scale the latent space with the scaling factor of the VAE
                 latents = vae.encode(im.to(dtype=precision_dict[train_config['mixed_precision']])).latent_dist.sample()
@@ -203,7 +200,7 @@ def train(par_dir, conf, trial, experiment_name):
                 # Sample random noise
                 # noise = torch.randn_like(im).to(device)
                 noise = torch.randn_like(latents)
-                if False:#noise_offset_is_true: ## TO BE IMPLEMENTED
+                if False:    #noise_offset_is_true: ## TO BE IMPLEMENTED
                     # https://www.crosslabs.org//blog/diffusion-with-offset-noise
                     noise += args.noise_offset * torch.randn(
                         (latents.shape[0], latents.shape[1], 1, 1), device=latents.device
@@ -221,7 +218,11 @@ def train(par_dir, conf, trial, experiment_name):
                 # (this is the forward diffusion process)
                 noisy_latents = scheduler.add_noise(latents, noise, timesteps)
 
-                encoder_hidden_states = text_encoder(test_tokenized_captions, return_dict=False)[0]
+                ## get encoder embeddings
+                if 'image' in condition_types:
+                    encoder_hidden_states = clip_vision_model(cond_input_mask, return_dict=False)[0]
+                else:
+                    encoder_hidden_states = text_encoder(test_tokenized_captions, return_dict=False)[0]
 
                 ## predic the noise residual or the velocity
                 if scheduler.config.prediction_type == "epsilon":
