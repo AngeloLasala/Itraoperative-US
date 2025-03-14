@@ -127,3 +127,63 @@ def load_autoencoder(autoencoder_config, dataset_config, device):
             ignore_mismatched_sizes=True).to(device)
     
     return model
+
+
+def load_unet_model(diffusion_model_config, autoencoder_config, dataset_config, device):
+    """
+    Ausiliar functio to load the UNet model
+
+    Parameters
+    ----------
+    diffusion_model_config : dict
+        Configuration of the diffusion model, main configuration
+
+    autoencoder_config : dict
+        Configuration of the autoencoder, for retrieving the latent space dimention and the number of channels
+    
+    dataset_config : dict
+        Configuration of the dataset
+
+    device : torch.device
+        The device where to move the
+    
+
+    Returns
+    -------
+    """
+    from diffusers import UNet2DConditionModel
+
+
+    initialization = diffusion_model_config['initialization']
+
+    if initialization == 'random':
+        logging.info('Training UNet with random initialization')
+        model = UNet2DConditionModel(
+            sample_size=diffusion_model_config['sample_size'],
+            in_channels=autoencoder_config['z_channels'],
+            out_channels=autoencoder_config['z_channels'],
+            block_out_channels=diffusion_model_config['down_channels'],
+            low_cpu_mem_usage=False,
+            use_safetensors=True,
+            ignore_mismatched_sizes=True
+        ).to(device)
+
+    elif initialization == 'SDv1.5':
+        logging.info('Training UNet with pretrained Hugginface model SDv1.5')
+        model = UNet2DConditionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['unet']),
+                                                sample_size=diffusion_model_config['sample_size'],
+                                                in_channels=autoencoder_config['z_channels'],
+                                                out_channels=autoencoder_config['z_channels'],
+                                                block_out_channels=diffusion_model_config['down_channels'],
+                                                low_cpu_mem_usage=False,
+                                                use_safetensors=True,
+                                                ignore_mismatched_sizes=True)
+
+    model = UNet2DConditionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['unet']),
+                                                sample_size=diffusion_model_config['sample_size'],
+                                                in_channels=autoencoder_config['z_channels'],
+                                                out_channels=autoencoder_config['z_channels'],
+                                                block_out_channels=diffusion_model_config['down_channels'],
+                                                low_cpu_mem_usage=False,
+                                                use_safetensors=True,
+                                                ignore_mismatched_sizes=True)
