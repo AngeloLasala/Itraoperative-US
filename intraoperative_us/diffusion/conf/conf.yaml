@@ -107,9 +107,6 @@ ldm_params:
       image_condition_h : 256
       image_condition_w : 256
       cond_drop_prob: 0.1                   ## dropout probability - CFG > 0.0, (original) ControlNET = 0.0
-    class_condition_config :                ## this is for the class conditioning of different type of hypertrophy 
-      num_classes : 4                       # numebr of classes, for now it is 4
-      cond_drop_prob : 0.1                  ## dropout probability - CFG > 0.0, (original) ControlNET = 0.0
   tokenizer: 'tokenizer/CLIPTokenizer'                         ## tokenizer for the text conditioning
   text_encoder: 'text_encoder/CLIPTextModel'                 ## text encoder for the text conditioning
 

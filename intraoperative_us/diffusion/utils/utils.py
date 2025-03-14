@@ -150,6 +150,8 @@ def load_unet_model(diffusion_model_config, autoencoder_config, dataset_config, 
 
     Returns
     -------
+    model : torch.nn.Module
+        The UNet model moved on available device
     """
     from diffusers import UNet2DConditionModel
 
@@ -177,13 +179,8 @@ def load_unet_model(diffusion_model_config, autoencoder_config, dataset_config, 
                                                 block_out_channels=diffusion_model_config['down_channels'],
                                                 low_cpu_mem_usage=False,
                                                 use_safetensors=True,
-                                                ignore_mismatched_sizes=True)
+                                                ignore_mismatched_sizes=True).to(device)
 
-    model = UNet2DConditionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['unet']),
-                                                sample_size=diffusion_model_config['sample_size'],
-                                                in_channels=autoencoder_config['z_channels'],
-                                                out_channels=autoencoder_config['z_channels'],
-                                                block_out_channels=diffusion_model_config['down_channels'],
-                                                low_cpu_mem_usage=False,
-                                                use_safetensors=True,
-                                                ignore_mismatched_sizes=True)
+    return model
+
+    
