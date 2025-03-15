@@ -1,7 +1,5 @@
 """
-Sample from trained conditional latent diffusion of trained model with hugginface.
-Fhe sampling follow the classifier-free guidance, and self perceptual loss (to do!!)
-
+Sample from trained Stable Diffusion with hugginface.
 """
 import numpy as np
 import torch
@@ -13,19 +11,16 @@ import os
 import logging
 
 from diffusers import DDIMScheduler, PNDMScheduler, UniPCMultistepScheduler, DDPMScheduler
-from transformers import CLIPTextModel, CLIPTokenizer
+from transformers import CLIPTextModel, CLIPTokenizer, CLIPVisionConfig, CLIPVisionModel, CLIPImageProcessor
 from diffusers import UNet2DConditionModel
 from accelerate import Accelerator
 import torch.nn.functional as F
 
 from intraoperative_us.diffusion.models.unet_cond_base import get_config_value, UNet2DConditionModelCostum
-from intraoperative_us.diffusion.models.vqvae import VQVAE
-from intraoperative_us.diffusion.models.vae import VAE 
 import intraoperative_us.diffusion.models.unet_cond_base as unet_cond_base
 import intraoperative_us.diffusion.models.unet_base as unet_base
-from intraoperative_us.diffusion.scheduler.scheduler import LinearNoiseScheduler
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS, GeneratedMaskDataset
-from intraoperative_us.diffusion.utils.utils import get_best_model, load_autoencoder, get_number_parameter
+from intraoperative_us.diffusion.utils.utils import get_best_model, load_autoencoder, load_unet_model, get_number_parameter
 from torch.utils.data import DataLoader
 
 import matplotlib.pyplot as plt
@@ -38,7 +33,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 
-def sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir, tokenizer, text_encoder, 
+def sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir, tokenizer, text_encoder, image_processor, clip_vision_model,
            autoencoder_model_config, diffusion_config, dataset_config, type_model, vae, save_folder, mask_folder, ius_folder,
            guide_w, activate_cond_ldm):
     """
@@ -73,34 +68,62 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
         uncond_input = {}
         if condition_config is not None:
             # im is the image (batch_size=8), cond_input is the conditional input ['image for the mask']
-            for key in condition_config['condition_types']: ## for all the type of condition, we move the  tensor on the device
-                cond_input[key] = data.to(device)
-                uncond_input[key] = torch.zeros_like(cond_input[key])
-        else:
-            pass
-    
-        xt = torch.randn((cond_input[key].shape[0],
+            if len(condition_config['condition_types']) > 0:
+                for key in condition_config['condition_types']: ## for all the type of condition, we move the  tensor on the device
+                    cond_input[key] = data.to(device)
+                    uncond_input[key] = torch.zeros_like(cond_input[key])
+
+                    xt = torch.randn((cond_input[key].shape[0],
                       autoencoder_model_config['z_channels'],
                       im_size_h,
                       im_size_w)).to(device)
-        test_tokenized_captions = tokenize_captions(xt.shape[0]).to(device)
+            else:
+                mask = data.to(device)
+                xt = torch.randn((mask.shape[0],
+                      autoencoder_model_config['z_channels'],
+                      im_size_h,
+                      im_size_w)).to(device)
+                
+        else:
+            pass
+    
+        ## SELECT THE CONDITIONING INPUT
+        if 'image' in condition_types:
+            cond_input_image = cond_input['image']
+            cond_input['image'] = cond_input_image.repeat(1,3,1,1)
+            cond_input_mask = image_processor(images=cond_input['image'], return_tensors="pt", do_rescale=False).pixel_values.to(accelerator.device)
+
+        elif len(condition_types) < 1:
+            # unconditional with empty string
+            test_tokenized_captions = tokenize_captions(xt.shape[0]).to(device)
+
         with torch.no_grad():
-            text_embeddings = text_encoder(test_tokenized_captions)[0]
-        
+            if 'image' in condition_types:
+                text_embeddings = clip_vision_model(test_tokenized_captions, cond_input_mask)[0]
+            else:
+                text_embeddings = text_encoder(test_tokenized_captions)[0]
+            print(text_embeddings.shape)
         ################# Sampling Loop ########################
-        # scheduler = UniPCMultistepScheduler.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="scheduler")
-        scheduler.set_timesteps(50)
-        # print(scheduler.set_timesteps(50)[:10])
+        
+        scheduler.set_timesteps(diffusion_config['num_sample_timesteps'])
         for t in tqdm.tqdm(scheduler.timesteps):
             xt = scheduler.scale_model_input(xt, timestep=t)
             
-            with torch.no_grad():
-                noise_pred_cond = model(xt, t, text_embeddings, cond_input)
-                noise_pred_uncond = model(xt, t, text_embeddings, uncond_input)            # ## get the noise prediction for the conditional and unconditional model
+            
+            if 'image' in condition_types:
+                ## with image cond using CFG
+                with torch.no_grad():
+                    noise_pred_cond = model(xt, t, text_embeddings)
+                    noise_pred_uncond = model(xt, t, text_embeddings)            # ## get the noise prediction for the conditional and unconditional model
 
-            ## sampling the noise for the conditional and unconditional model
-            noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
+                ## sampling the noise for the conditional and unconditional model
+                noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
      
+            else:
+                ## with yexy is uncoditional by construction
+                with torch.no_grad():
+                    noise_pred = model(xt, t, text_embeddings, return_dict=False)[0]
+
             # Use scheduler to get x0 and xt-1
             # xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
             xt = scheduler.step(noise_pred, t, xt).prev_sample
@@ -160,7 +183,6 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
         logging.info(f"{diffusion_config['scheduler']} scheduler")
         scheduler = PNDMScheduler.from_pretrained(os.path.join(diffusion_config['scheduler_path'], diffusion_config['scheduler']),
                                                   prediction_type=diffusion_config['prediction_type'])
-
     elif diffusion_config['scheduler'] == 'ddpm':
         logging.info(f"{diffusion_config['scheduler']} scheduler")
         scheduler = DDPMScheduler(num_train_timesteps=diffusion_config['num_train_timesteps'])
@@ -172,6 +194,9 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
     ############# Load tokenizer and text model #################
     tokenizer = CLIPTokenizer.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['tokenizer']))
     text_encoder = CLIPTextModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['text_encoder']), use_safetensors=True).to(device)
+    
+    clip_vision_model = CLIPVisionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['clip_vision_model']))
+    image_processor = CLIPImageProcessor.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['image_processor']))
     ###############################################
     
     ########## Load AUTOENCODER #############
@@ -197,14 +222,14 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vae', f'vae_best_{best_model}.pth'), map_location=device))
 
         # conditional ldm
-        model = UNet2DConditionModelCostum(diffusion_model_config).to(device)
+        model = load_unet_model(diffusion_model_config, autoencoder_config, dataset_config, device)
         model.eval()
         model.load_state_dict(torch.load(os.path.join(model_dir, f'ldm_{epoch}.pth'),map_location=device), strict=False)
 
     #####################################
 
     ######### Create output directories #############
-    save_folder = os.path.join(model_dir, f'w_{guide_w}', f'samples_ep_{epoch}')
+    save_folder = os.path.join(model_dir, f'w_{guide_w}', diffusion_config['scheduler'], f'samples_ep_{epoch}')
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
         mask_folder = os.path.join(save_folder, 'masks')
@@ -222,7 +247,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
     
     ######## Sample from the model 
     with torch.no_grad():
-        sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir, tokenizer, text_encoder,
+        sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir, tokenizer, text_encoder, image_processor, clip_vision_model,
                autoencoder_config, diffusion_config, dataset_config, type_model, vae, save_folder, mask_folder, ius_folder,
                guide_w, activate_cond_ldm)
 
