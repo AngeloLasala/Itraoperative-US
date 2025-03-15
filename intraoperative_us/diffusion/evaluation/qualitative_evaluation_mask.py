@@ -224,7 +224,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
 
     ## ANALYSIS OVER EPOCHS - GENERATED TUMOR MASK
     epochs_dict = {}
-    for ep in [500, 1000, 1500, 2000, 2500, 3000]:
+    for ep in [500, 1000, 2000, 2500, 3000]:
         ep_dict = {}
         ## load data
         generated_mask_dir = os.path.join(par_dir, trial, experiment, f'w_{guide_w}', scheduler_type, f"samples_ep_{ep}")
