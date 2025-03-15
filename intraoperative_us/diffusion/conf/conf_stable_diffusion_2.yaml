@@ -63,7 +63,7 @@ diffusion_params:
   ## cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
   scheduler_path: /leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/scheduler/
   prediction_type: 'epsilon'     # v_prediction, epsilon
-  num_sample_timesteps : 50
+  num_sample_timesteps : 1000
   num_train_timesteps : 1000
   beta_start : 0.0015
   beta_end : 0.0195
