@@ -91,7 +91,7 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
         if 'image' in condition_types:
             cond_input_image = cond_input['image']
             cond_input['image'] = cond_input_image.repeat(1,3,1,1)
-            cond_input_mask = image_processor(images=cond_input['image'], return_tensors="pt", do_rescale=False).pixel_values.to(accelerator.device)
+            cond_input_mask = image_processor(images=cond_input['image'], return_tensors="pt", do_rescale=False).pixel_values.to(device)
 
         elif len(condition_types) < 1:
             # unconditional with empty string
