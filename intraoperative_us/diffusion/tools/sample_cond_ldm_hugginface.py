@@ -88,9 +88,7 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
             text_embeddings = text_encoder(test_tokenized_captions)[0]
         
         ################# Sampling Loop ########################
-        # scheduler = UniPCMultistepScheduler.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="scheduler")
-        scheduler.set_timesteps(50)
-        # print(scheduler.set_timesteps(50)[:10])
+        scheduler.set_timesteps(diffusion_config['num_sample_timesteps'])
         for t in tqdm.tqdm(scheduler.timesteps):
             xt = scheduler.scale_model_input(xt, timestep=t)
             
@@ -204,7 +202,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
     #####################################
 
     ######### Create output directories #############
-    save_folder = os.path.join(model_dir, f'w_{guide_w}', f'samples_ep_{epoch}')
+    save_folder = os.path.join(model_dir, f'w_{guide_w}', diffusion_config['scheduler'], f'samples_ep_{epoch}')
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
         mask_folder = os.path.join(save_folder, 'masks')
