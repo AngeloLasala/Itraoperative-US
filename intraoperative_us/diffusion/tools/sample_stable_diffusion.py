@@ -92,6 +92,7 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
             cond_input_image = cond_input['image']
             cond_input['image'] = cond_input_image.repeat(1,3,1,1)
             cond_input_mask = image_processor(images=cond_input['image'], return_tensors="pt", do_rescale=False).pixel_values.to(device)
+            cond_input_mask = cond_input_mask.float()
 
         elif len(condition_types) < 1:
             # unconditional with empty string
@@ -196,7 +197,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
     tokenizer = CLIPTokenizer.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['tokenizer']))
     text_encoder = CLIPTextModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['text_encoder']), use_safetensors=True).to(device)
     
-    clip_vision_model = CLIPVisionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['clip_vision_model']))
+    clip_vision_model = CLIPVisionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['clip_vision_model'])).to(device)
     image_processor = CLIPImageProcessor.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['image_processor']))
     ###############################################
     
