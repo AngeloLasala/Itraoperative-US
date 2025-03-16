@@ -92,7 +92,6 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
             cond_input_image = cond_input['image']
             cond_input['image'] = cond_input_image.repeat(1,3,1,1)
             cond_input_mask = image_processor(images=cond_input['image'], return_tensors="pt", do_rescale=False).pixel_values.to(device)
-            cond_input_mask = cond_input_mask.float()
 
         elif len(condition_types) < 1:
             # unconditional with empty string
@@ -114,8 +113,8 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
             if 'image' in condition_types:
                 ## with image cond using CFG
                 with torch.no_grad():
-                    noise_pred_cond = model(xt, t, text_embeddings)
-                    noise_pred_uncond = model(xt, t, text_embeddings)            # ## get the noise prediction for the conditional and unconditional model
+                    noise_pred_cond = model(xt, t, text_embeddings, return_dict=False)[0]   ## get the noise prediction for the conditional model
+                    noise_pred_uncond = model(xt, t, text_embeddings, return_dict=False)[0]  ## get the noise prediction for the conditional and unconditional model
 
                 ## sampling the noise for the conditional and unconditional model
                 noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
