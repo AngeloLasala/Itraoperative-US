@@ -99,7 +99,7 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
 
         with torch.no_grad():
             if 'image' in condition_types:
-                text_embeddings = clip_vision_model(test_tokenized_captions, cond_input_mask)[0]
+                text_embeddings = clip_vision_model(cond_input_mask)[0]
             else:
                 text_embeddings = text_encoder(test_tokenized_captions)[0]
             print(text_embeddings.shape)
