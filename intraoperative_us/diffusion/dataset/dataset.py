@@ -403,12 +403,13 @@ class GenerateDataset(torch.utils.data.Dataset):
     """
     Dataset of generated image loaded from the path
     """
-    def __init__(self, par_dir, trial, experiment, guide_w, epoch, size, input_channels,
+    def __init__(self, par_dir, trial, experiment, guide_w, scheduler, epoch,  size, input_channels,
                  mask=False):
         self.par_dir = par_dir
         self.trial = trial
         self.experiment = experiment
         self.guide_w = guide_w
+        self.scheduler = scheduler
         self.epoch = epoch
         self.size = size
         self.input_channels = input_channels
@@ -449,7 +450,8 @@ class GenerateDataset(torch.utils.data.Dataset):
         """
         retrive the path 'eco' from current directory
         """
-        data_ius = os.path.join(self.par_dir, self.trial, self.experiment, f'w_{self.guide_w}', f'samples_ep_{self.epoch}','ius')
+        print(self.scheduler)
+        data_ius = os.path.join(self.par_dir, self.trial, self.experiment, f'w_{self.guide_w}', self.scheduler, f'samples_ep_{self.epoch}','ius')
         return data_ius
 
     def get_mask_images(self):
