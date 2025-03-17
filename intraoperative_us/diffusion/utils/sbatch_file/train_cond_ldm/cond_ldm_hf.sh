@@ -12,4 +12,5 @@
 python -m intraoperative_us.diffusion.tools.train_cond_ldm_hugginface --conf conf\
           --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
           --trial trial_ldm\
+          --experiment_name 'big_cond_ldm'\
           --log info
