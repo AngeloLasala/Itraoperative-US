@@ -107,14 +107,6 @@ def train(par_dir, conf, trial, experiment_name):
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vae', f'vae_best_{best_model}.pth'), map_location=device))
 
     # Unet2DConditionModel
-    # model = UNet2DConditionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['unet']),
-    #                                             sample_size=diffusion_model_config['sample_size'],
-    #                                             in_channels=autoencoder_config['z_channels'],
-    #                                             out_channels=autoencoder_config['z_channels'],
-    #                                             block_out_channels=diffusion_model_config['down_channels'],
-    #                                             low_cpu_mem_usage=False,
-    #                                             use_safetensors=True,
-    #                                             ignore_mismatched_sizes=True)
     model = UNet2DConditionModelCostum(diffusion_model_config)
     model.train()
 
@@ -156,7 +148,6 @@ def train(par_dir, conf, trial, experiment_name):
     ## Prepare the training
     num_epochs = train_config['ldm_epochs']
     optimizer = torch.optim.AdamW(model.parameters(), lr=train_config['ldm_lr'])   # optimizer = Adam(model.parameters(), lr=train_config['ldm_lr'])
-    criterion = torch.nn.MSELoss()
     accelerator = Accelerator(
         mixed_precision=train_config['mixed_precision'],
         gradient_accumulation_steps=train_config['gradient_accumulation_steps'], 
