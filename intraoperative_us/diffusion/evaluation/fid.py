@@ -8,6 +8,7 @@ import yaml
 import torch
 import logging
 import numpy as np
+import json
 import pathlib
 from torchvision import transforms
 import torchvision.transforms as TF
@@ -66,7 +67,6 @@ def get_activations(
             )
         )
         batch_size = len(files)
-
     dataset = ImagePathDataset(files, transforms=TF.ToTensor())
     dataloader = torch.utils.data.DataLoader(
         dataset,
@@ -333,23 +333,24 @@ def fid_experiment(conf, experiment_dir, batch_size=50, device=None, dims=2048, 
             print(exc)
 
     dataset_config = config['dataset_params']
-    print(dataset_config)
-    print(epoch_list)
+    dataset_path = dataset_config['dataset_path']
+    splitting_json = dataset_config['splitting_json']
+    split = 'train'
     
-    # data_real = []
-    # for batch in dataset_config['dataset_batch']:
-    #     data_batch = os.path.join(dataset_config['parent_dir'], dataset_config['im_path'], batch,
-    #                          dataset_config['split'], dataset_config['phase'], 'image')
-    #     data_real.append(data_batch)
+    data_real = []
+    with open(os.path.join(os.path.dirname(dataset_path), splitting_json), 'r') as file:
+        splitting_dict = json.load(file)
+    subjects_files = splitting_dict[split]
+    data_real = [os.path.join(dataset_path, subject, 'volume') for subject in subjects_files]
+       
+    # Fake images validation
+    fid_values = {}
+    for epoch in epoch_list:
+        data_fake = [os.path.join(experiment_dir, f'samples_ep_{epoch}', 'ius')]
+        fid_value = calculate_fid_given_paths([data_real, data_fake], batch_size, device, dims, num_workers)
+        fid_values[epoch] = fid_value
 
-    # # Fake images validation
-    # fid_values = {}
-    # for epoch in epoch_list:
-    #     data_fake = [os.path.join(experiment_dir, f'samples_ep_{epoch}')]
-    #     fid_value = calculate_fid_given_paths([data_real, data_fake], batch_size, device, dims, num_workers)
-    #     fid_values[epoch] = fid_value
-
-    # return fid_values
+    return fid_values
 
 
 
@@ -364,10 +365,12 @@ if __name__ == "__main__":
     parser.add_argument('--guide_w', type=float, default=0.0, help='guide_w for the conditional model, w=-1 [unconditional], w=0 [vanilla conditioning], w>0 [guided conditional]')
     parser.add_argument('--scheduler', type=str, default='ddpm', help='sheduler used for sampling, i.e. ddpm, pndm')
     parser.add_argument('--show_plot', action='store_true', help="show and save the FID plot, default=False")
-    parser.add_argument('--log', type=str, default='debug', help='Logging level')
+    parser.add_argument('--log', type=str, default='info', help='Logging level')
     args = parser.parse_args()
 
+    print('Am I using GPU: ', torch.cuda.is_available())
     device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
+
 
     ## set the logger
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
@@ -378,23 +381,23 @@ if __name__ == "__main__":
     experiment_dir_w = os.path.join(experiment_dir, f'w_{args.guide_w}', args.scheduler)
     
     fid = fid_experiment(config, experiment_dir_w, device=device)
-    # for key, value in fid.items():
-    #     print(f'Epoch: {key}, FID: {value}')    
+    for key, value in fid.items():
+        print(f'Epoch: {key}, FID: {value}')    
     
-    # ## save the FID score
-    # with open(os.path.join(experiment_dir, f'w_{args.guide_w}', 'FID_score.txt'), 'w') as f:
-    #     for key, value in fid.items():
-    #         f.write(f'Epoch: {key}, FID: {value}\n')
+    ## save the FID score
+    with open(os.path.join(experiment_dir, f'w_{args.guide_w}', 'FID_score.txt'), 'w') as f:
+        for key, value in fid.items():
+            f.write(f'Epoch: {key}, FID: {value}\n')
         
-    # if args.show_plot:
-    #     fig,ax = plt.subplots(nrows=1, ncols=1, figsize=(8,5), num=f'FID score', tight_layout=True)
-    #     ax.plot(list(fid.keys()), list(fid.values()), marker='o', color='b')
-    #     ax.set_xlabel('Epoch', fontsize=20)
-    #     ax.set_ylabel('FID', fontsize=20)
-    #     ax.tick_params(axis='both', which='major', labelsize=16)
-    #     ax.grid('dotted')
-    #     plt.savefig(os.path.join(experiment_dir, 'FID_score.png'))
-    #     plt.show()
+    if args.show_plot:
+        fig,ax = plt.subplots(nrows=1, ncols=1, figsize=(8,5), num=f'FID score', tight_layout=True)
+        ax.plot(list(fid.keys()), list(fid.values()), marker='o', color='b')
+        ax.set_xlabel('Epoch', fontsize=20)
+        ax.set_ylabel('FID', fontsize=20)
+        ax.tick_params(axis='both', which='major', labelsize=16)
+        ax.grid('dotted')
+        plt.savefig(os.path.join(experiment_dir, 'FID_score.png'))
+        plt.show()
  
 
    

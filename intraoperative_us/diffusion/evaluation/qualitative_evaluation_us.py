@@ -76,19 +76,6 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
     logging.info(f'len train data {len(data_img)}')
     data_loader = DataLoader(data_img, batch_size=1, shuffle=False, num_workers=8)
 
-    data_val = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
-                               dataset_path= dataset_config['dataset_path'],
-                               im_channels= dataset_config['im_channels'],
-                               splitting_json=dataset_config['splitting_json'], 
-                               split='val',
-                               splitting_seed=dataset_config['splitting_seed'],
-                               train_percentage=dataset_config['train_percentage'],
-                               val_percentage=dataset_config['val_percentage'],
-                               test_percentage=dataset_config['test_percentage'],
-                               condition_config=config['ldm_params']['condition_config'],
-                               data_augmentation=False)
-    logging.info(f'len val data {len(data_val)}')
-    data_loader_val = DataLoader(data_val, batch_size=1, shuffle=False, num_workers=8)
 
     data_gen = GenerateDataset(par_dir, trial, experiment, guide_w, scheduler, epoch, size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'])
     data_loader_gen = DataLoader(data_gen, batch_size=1, shuffle=False, num_workers=8)
@@ -101,15 +88,19 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
         for i, (gen_img, mask) in enumerate(data_gen_mask):
             ## plt the generated image and the mask
             print(gen_img.shape, mask.shape)
-            plt.figure(figsize=(10,10), num=f'gen_mask_{i}', tight_layout=True)
-            plt.subplot(1,2,1)
+            plt.figure(figsize=(20,10), num=f'gen_mask_{i}', tight_layout=True)
+            plt.subplot(1,3,1)
             plt.imshow(gen_img[0,:,:].cpu().numpy(), cmap='gray')
             plt.title('Generated image')
             plt.axis('off')
-            plt.subplot(1,2,2)
+            plt.subplot(1,3,2)
             plt.imshow(mask[0,:,:].cpu().numpy(), cmap='gray')
             plt.title('Mask')
             plt.axis('off')
+            plt.subplot(1,3,3)
+            plt.imshow(gen_img[0,:,:].cpu().numpy(), cmap='gray')
+            tumor_mask = mask[0,:,:].cpu().numpy()
+            plt.imshow(np.ma.masked_where(tumor_mask == 0, tumor_mask), cmap='jet', alpha=0.3)
             plt.show() 
 
 
@@ -150,22 +141,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
             encoded_output_list.append(encoded_output.cpu().numpy())
 
     encoded_output_list = np.array(encoded_output_list)
-
-    with torch.no_grad():
-        ## Real data
-        for im, cond in tqdm(data_loader_val):
-            im = im.float().to(device)
-            for key in cond.keys(): ## for all the type of condition, we move the  tensor on the device
-                cond[key] = cond[key].to(device)
-
-            ## Encoder - get the latent space
-            encoded_output_val = vae.encode(im).latent_dist.sample()
-
-            encoded_output_val = encoded_output_val[0,:,:,:].flatten()
-            encoded_val_list.append(encoded_output_val.cpu().numpy())
-
-    encoded_val_list = np.array(encoded_val_list)
-         
+      
     with torch.no_grad():
         for gen_img in tqdm(data_loader_gen):
             gen_img = gen_img.float().to(device)
@@ -178,9 +154,9 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
         gen_encoded_output_list = np.array(gen_encoded_output_list)
          
 
-    real_gen_stack = np.vstack((encoded_output_list, encoded_val_list, gen_encoded_output_list))
+    real_gen_stack = np.vstack((encoded_output_list, gen_encoded_output_list))
     real_gen_label_stack = np.concatenate((np.ones(encoded_output_list.shape[0]), 
-                                           np.ones(encoded_val_list.shape[0])*2,
+                                        #    np.ones(encoded_val_list.shape[0])*2,
                                            np.zeros(gen_encoded_output_list.shape[0])))
    
     pca = PCA(n_components=50)
@@ -208,7 +184,6 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
         
     
         ## compute the silouhette score between the real and generated data
-        # real_gen_stack_tsne = (real_gen_stack_tsne - np.min(real_gen_stack_tsne, axis=0)) / (np.max(real_gen_stack_tsne, axis=0) - np.min(real_gen_stack_tsne, axis=0))
         silhouette_score_all = silhouette_score(real_gen_stack_tsne, real_gen_label_stack)
         
         # compute the DB values for the real and generated data
