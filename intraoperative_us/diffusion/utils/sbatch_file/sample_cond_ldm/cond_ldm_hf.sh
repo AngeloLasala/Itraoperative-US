@@ -10,13 +10,13 @@
 #SBATCH --account=IscrC_Med-LMGM     # account name
 
 for trial in trial_ldm; do
-    for w in -1.0 3.0 5.0 7.0 9.0; do
-        for epoch in 1200 1800 2400 3000 ; do
+    for w in -1.0 3.0 5.0 7.0; do
+        for epoch in 3000 6000 9000 ; do
                 python -m intraoperative_us.diffusion.tools.sample_cond_ldm_hugginface\
                         --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
                         --generated_mask_dir "/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion/mask/small_vae/uncond_ldm_1/w_-1.0/ddpm/samples_ep_3000"\
                         --trial $trial\
-                        --experiment cond_ldm_2\
+                        --experiment cond_ldm_3\
                         --epoch $epoch\
                         --guide_w $w\
 
