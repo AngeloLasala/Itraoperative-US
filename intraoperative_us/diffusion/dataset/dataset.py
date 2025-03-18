@@ -88,7 +88,7 @@ class IntraoperativeUS():
         if len(self.condition_types) > 0:  # check if there is at least one condition in ['class', 'text', 'image']
 
             ################ IMAGE CONDITION ###################################
-            if 'image' in self.condition_types:
+            if 'image' in self.condition_types or 'controlnet' in self.condition_types:
                 if self.data_augmentation:
                     im_tensor, label_tensor = self.augmentation(im, label)
                 else:
