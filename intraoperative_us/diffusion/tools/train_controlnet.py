@@ -106,7 +106,7 @@ def train(par_dir, conf, trial, experiment_name):
 
     # Unet2DConditionModel - and controlnet
     if 'controlnet' in condition_types:
-        ## here i have to load a unet model from the pretrained one and freeze the weights
+        # here i have to load a unet model from the pretrained one and freeze the weights
         model_experiment = condition_config['controlnet_condition_config']['pretrained_model_experiment']
         model_path = os.path.join(trial_folder, model_experiment)
         with open(os.path.join(model_path, 'config.yaml'), 'r') as f:
@@ -175,11 +175,16 @@ def train(par_dir, conf, trial, experiment_name):
     )
     controlnet, optimizer, data_loader, lr_scheduler = accelerator.prepare(controlnet, optimizer, data_loader, lr_scheduler)
     
-    precision_dict = {"fp16": torch.float16, "bf16": torch.bfloat16, "float32": torch.float32}
-    
-    text_encoder.to(accelerator.device, dtype=precision_dict[train_config['mixed_precision']])
-    vae.to(accelerator.device, dtype=precision_dict[train_config['mixed_precision']])
-    model.to(accelerator.device, dtype=precision_dict[train_config['mixed_precision']])
+    ## set the weight dtype
+    weight_dtype = torch.float32
+    if accelerator.mixed_precision == "fp16":
+        weight_dtype = torch.float16
+    elif accelerator.mixed_precision == "bf16":
+        weight_dtype = torch.bfloat16
+
+    text_encoder.to(accelerator.device, dtype=weight_dtype)
+    vae.to(accelerator.device, dtype=weight_dtype)
+    model.to(accelerator.device, dtype=weight_dtype)
 
     # # Run training
     logging.info('Start training ...')
@@ -205,11 +210,9 @@ def train(par_dir, conf, trial, experiment_name):
             cond_input_image = cond_input['image']
             im_drop_prob = get_config_value(condition_config['image_condition_config'], 'cond_drop_prob', 0.)
             cond_input['image'] = drop_image_condition(cond_input_image, im, im_drop_prob).repeat(1, 3, 1, 1)
-            cond_input_mask = cond_input['image'].to(accelerator.device)
             
             with accelerator.accumulate(controlnet):
-                # Convert images to latent space, scalinf factor is used to scale the latent space with the scaling factor of the VAE
-                latents = vae.encode(im.to(dtype=precision_dict[train_config['mixed_precision']])).latent_dist.sample()
+                latents = vae.encode(im.to(dtype=weight_dtype)).latent_dist.sample()
                 latents = latents * vae.config.scaling_factor
 
                 # Sample random noise
@@ -222,19 +225,13 @@ def train(par_dir, conf, trial, experiment_name):
 
                 # Add noise to the latents according to the noise magnitude at each timestep
                 # (this is the forward diffusion process)
-                noisy_latents = scheduler.add_noise(latents, noise, timesteps)
+                noisy_latents = scheduler.add_noise(latents.float(), noise.float(), timesteps).to(dtype=weight_dtype)
 
                 ## get encoder embeddings
                 encoder_hidden_states = text_encoder(test_tokenized_captions, return_dict=False)[0]
 
                 ## controlnet condition
-                print('noisy', noisy_latents.mean().item())
-                print('im', im.mean().item())   
-                print('cond_input_mask', cond_input_mask.mean().item())
-                print('time', timesteps)
-                print('encoder_hidden_states', encoder_hidden_states.mean().item())
-                print("ControlNet training mode:", controlnet.training)
-            
+                cond_input_mask = cond_input['image'].to(accelerator.device, dtype=weight_dtype)
                 down_block_res_samples, mid_block_res_sample = controlnet(
                     noisy_latents,
                     timesteps,
@@ -242,21 +239,7 @@ def train(par_dir, conf, trial, experiment_name):
                     controlnet_cond=cond_input_mask,
                     return_dict=False,
                 )
-                import matplotlib.pyplot as plt
-                print(len(down_block_res_samples)) #.shape, mid_block_res_sample.shape)
                 
-                for i in range(len(down_block_res_samples)):
-                    print(down_block_res_samples[i].shape)
-                    print(f"down_block_res_samples mean {i}: {down_block_res_samples[i].mean().item()}")
-                    uno =  down_block_res_samples[i]
-                    for ii in range(uno.shape[1]):
-                        plt.figure()
-                        plt.imshow(uno[0,ii,:,:].detach().cpu().numpy())
-
-                        plt.figure()
-                        plt.imshow(cond_input_mask[0,0,:,:].detach().cpu().numpy())
-                        plt.show()
-
     #             ## predic the noise residual or the velocity
     #             if scheduler.config.prediction_type == "epsilon":
     #                 target = noise

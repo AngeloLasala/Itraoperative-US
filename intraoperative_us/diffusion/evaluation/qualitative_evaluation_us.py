@@ -88,19 +88,21 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
         for i, (gen_img, mask) in enumerate(data_gen_mask):
             ## plt the generated image and the mask
             print(gen_img.shape, mask.shape)
-            plt.figure(figsize=(20,10), num=f'gen_mask_{i}', tight_layout=True)
-            plt.subplot(1,3,1)
-            plt.imshow(gen_img[0,:,:].cpu().numpy(), cmap='gray')
-            plt.title('Generated image')
-            plt.axis('off')
+            plt.figure(figsize=(25,12), num=f'gen_mask_{i}', tight_layout=True)
             plt.subplot(1,3,2)
+            plt.imshow(gen_img[0,:,:].cpu().numpy(), cmap='gray')
+            plt.title('Generated image', fontsize=30)
+            plt.axis('off')
+            plt.subplot(1,3,1)
             plt.imshow(mask[0,:,:].cpu().numpy(), cmap='gray')
-            plt.title('Mask')
+            plt.title('Mask', fontsize=30)
             plt.axis('off')
             plt.subplot(1,3,3)
             plt.imshow(gen_img[0,:,:].cpu().numpy(), cmap='gray')
             tumor_mask = mask[0,:,:].cpu().numpy()
-            plt.imshow(np.ma.masked_where(tumor_mask == 0, tumor_mask), cmap='jet', alpha=0.3)
+            plt.imshow(np.ma.masked_where(tumor_mask == 0, tumor_mask), cmap='ocean', alpha=0.3)
+            plt.title('Generated image with mask', fontsize=30)
+            plt.axis('off')
             plt.show() 
 
 
