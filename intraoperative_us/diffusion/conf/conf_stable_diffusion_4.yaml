@@ -67,7 +67,7 @@ diffusion_params:
   num_train_timesteps : 1000
   beta_start : 0.0015
   beta_end : 0.0195
-  lr_scheduler: "cnostant"             # The scheduler type to use. Choose between ["linear", "cosine", "cosine_with_restarts", "polynomial",'"constant", "constant_with_warmup"
+  lr_scheduler: "constant"             # The scheduler type to use. Choose between ["linear", "cosine", "cosine_with_restarts", "polynomial",'"constant", "constant_with_warmup"
   lr_warmup_steps: 500                # Number of steps for the warmup in the lr scheduler
 
 ldm_params:
