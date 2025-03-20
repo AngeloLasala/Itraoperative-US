@@ -169,7 +169,7 @@ def load_unet_model(diffusion_model_config, autoencoder_config, dataset_config, 
 
         ).to(device)
 
-    elif initialization == 'SD1.5':
+    elif initialization == 'SD1.5' or initialization == 'lora':
         logging.info('Training UNet with pretrained Hugginface model SDv1.5')
         model = UNet2DConditionModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['unet']),
                                                 sample_size=diffusion_model_config['sample_size'],
