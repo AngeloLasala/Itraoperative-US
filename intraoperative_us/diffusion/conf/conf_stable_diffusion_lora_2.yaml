@@ -3,7 +3,7 @@ dataset_params:
   # local path: 
   #            1) "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"
   #            2) cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/ius_data/dataset'
-  dataset_path: "/leonardo_work/IscrC_Med-LMGM/Angelo/ius_data/dataset"  
+  dataset_path: "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"  
   im_channels : 1
   im_size_h : 256         # 256
   im_size_w : 256         # 256 
@@ -19,7 +19,7 @@ autoencoder_params:
    ## '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default' -> architecture from huggingface
    ## cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'
    ## 'scratch -> old version'
-  autoencoder_type: '/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'         
+  autoencoder_type: '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'         
   ## 'random' -> random initialization, 
   ## 'SD1.5'  -> SD1.5 initialization from hugginface
   ## 'only_D' -> E from SD1.5 and D 
@@ -61,7 +61,7 @@ diffusion_params:
   scheduler: 'ddpm'
   ## local path: '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
   ## cineca: '/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
-  scheduler_path: /leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/scheduler/
+  scheduler_path: /home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/scheduler/
   prediction_type: 'epsilon'     # v_prediction, epsilon
   num_sample_timesteps : 1000
   num_train_timesteps : 1000
@@ -74,10 +74,11 @@ ldm_params:
   unet: unet_cond/UNet2DConditionModel_SD1.5_default     ## path of hugginface model
   ## local : "/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models"
   ## cineca: "/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/models"
-  unet_path: "/leonardo_work/IscrC_Med-LMGM/Angelo/Itraoperative-US/intraoperative_us/diffusion/models"
+  unet_path: "/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models"
   ## 'random' -> random initialization
   ## 'SD1.5'  -> SD1.5 initialization from hugginface - for exstensive fine-tuning
-  initialization: 'random'
+  ## 'lora'   -> SD1.5 initialization + lora finetuning 
+  initialization: 'lora'
   # in_channels: 4,  i.e. z_channels
   # out_channels: 4, i.e. z_channels
   sample_size: 32                           ## shape of the input of autoencoder
@@ -122,7 +123,7 @@ train_params:
   autoencoder_epochs : 100
   num_samples : 25
   num_grid_rows : 5
-  ldm_lr: 0.00001
+  ldm_lr: 0.0001    ## for lora finetuning 10^-4, without lora finetuning 10^-5 
   autoencoder_lr: 0.0001
   autoencoder_acc_steps : 1
   autoencoder_img_save_steps : 8
