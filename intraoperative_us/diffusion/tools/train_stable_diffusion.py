@@ -26,7 +26,6 @@ from intraoperative_us.diffusion.scheduler.scheduler import LinearNoiseScheduler
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
 from intraoperative_us.diffusion.utils.utils import get_best_model, load_autoencoder, load_unet_model, get_number_parameter
 from torch.utils.data import DataLoader
-from peft import LoraConfig
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -129,17 +128,6 @@ def train(par_dir, conf, trial, experiment_name):
     clip_vision_model.requires_grad_(False)
     model.train()
 
-    ## initialize the lora config
-    if diffusion_model_config['initialization'] == 'lora':
-        unet_lora_config = LoraConfig(
-            r=4,
-            lora_alpha=4,
-            init_lora_weights="gaussian",
-            target_modules=["to_k", "to_q", "to_v", "to_out.0"],
-        )
-
-    print(unet_lora_config)
-
     save_folder = os.path.join(trial_folder)
     if not os.path.exists(save_folder):
         if experiment_name is not None:
@@ -180,116 +168,115 @@ def train(par_dir, conf, trial, experiment_name):
     text_encoder.to(accelerator.device, dtype=precision_dict[train_config['mixed_precision']])
     clip_vision_model.to(accelerator.device, dtype=precision_dict[train_config['mixed_precision']])
     vae.to(accelerator.device, dtype=precision_dict[train_config['mixed_precision']])
-    print(lr_scheduler)
 
     # Run training
-    # logging.info('Start training ...')
-    # torch.cuda.empty_cache()
-    # for epoch_idx in range(num_epochs):
-    #     train_loss = 0.0
-    #     progress_bar = tqdm(total=len(data_loader), disable=False)
-    #     progress_bar.set_description(f"Epoch {epoch_idx + 1}/{num_epochs}")
+    logging.info('Start training ...')
+    torch.cuda.empty_cache()
+    for epoch_idx in range(num_epochs):
+        train_loss = 0.0
+        progress_bar = tqdm(total=len(data_loader), disable=False)
+        progress_bar.set_description(f"Epoch {epoch_idx + 1}/{num_epochs}")
 
-    #     time_start = time.time()
-    #     losses = []
-    #     for data in data_loader:
-    #         cond_input = None
-    #         if len(condition_types) > 0:  ## to be updating
-    #             im, cond_input = data
-    #         else:
-    #             im = data
+        time_start = time.time()
+        losses = []
+        for data in data_loader:
+            cond_input = None
+            if len(condition_types) > 0:  ## to be updating
+                im, cond_input = data
+            else:
+                im = data
 
-    #         im = im.float()
-    #         test_tokenized_captions = tokenize_captions(im.shape[0]).to(accelerator.device)
+            im = im.float()
+            test_tokenized_captions = tokenize_captions(im.shape[0]).to(accelerator.device)
                
-    #         #############  Handiling the condition input for cond LDM ########################################
-    #         if 'image' in condition_types:
-    #             assert 'image' in cond_input, 'Conditioning Type Image but no image conditioning input present'
-    #             cond_input_image = cond_input['image']
-    #             im_drop_prob = get_config_value(condition_config['image_condition_config'], 'cond_drop_prob', 0.)
-    #             cond_input['image'] = drop_image_condition(cond_input_image, im, im_drop_prob).repeat(1,3,1,1)
-    #             cond_input_mask = image_processor(images=cond_input['image'], return_tensors="pt", do_rescale=False).pixel_values.to(accelerator.device)
+            #############  Handiling the condition input for cond LDM ########################################
+            if 'image' in condition_types:
+                assert 'image' in cond_input, 'Conditioning Type Image but no image conditioning input present'
+                cond_input_image = cond_input['image']
+                im_drop_prob = get_config_value(condition_config['image_condition_config'], 'cond_drop_prob', 0.)
+                cond_input['image'] = drop_image_condition(cond_input_image, im, im_drop_prob).repeat(1,3,1,1)
+                cond_input_mask = image_processor(images=cond_input['image'], return_tensors="pt", do_rescale=False).pixel_values.to(accelerator.device)
        
-    #         with accelerator.accumulate(model):
-    #             # Convert images to latent space, scalinf factor is used to scale the latent space with the scaling factor of the VAE
-    #             latents = vae.encode(im.to(dtype=precision_dict[train_config['mixed_precision']])).latent_dist.sample()
-    #             latents = latents * vae.config.scaling_factor
+            with accelerator.accumulate(model):
+                # Convert images to latent space, scalinf factor is used to scale the latent space with the scaling factor of the VAE
+                latents = vae.encode(im.to(dtype=precision_dict[train_config['mixed_precision']])).latent_dist.sample()
+                latents = latents * vae.config.scaling_factor
 
-    #             # Sample random noise
-    #             # noise = torch.randn_like(im).to(device)
-    #             noise = torch.randn_like(latents)
-    #             if False:    #noise_offset_is_true: ## TO BE IMPLEMENTED
-    #                 # https://www.crosslabs.org//blog/diffusion-with-offset-noise
-    #                 noise += args.noise_offset * torch.randn(
-    #                     (latents.shape[0], latents.shape[1], 1, 1), device=latents.device
-    #                 )
+                # Sample random noise
+                # noise = torch.randn_like(im).to(device)
+                noise = torch.randn_like(latents)
+                if False:    #noise_offset_is_true: ## TO BE IMPLEMENTED
+                    # https://www.crosslabs.org//blog/diffusion-with-offset-noise
+                    noise += args.noise_offset * torch.randn(
+                        (latents.shape[0], latents.shape[1], 1, 1), device=latents.device
+                    )
 
-    #             # Sample timestep
-    #             # t = torch.randint(0, diffusion_config['num_timesteps'], (im.shape[0],)).to(device)
+                # Sample timestep
+                # t = torch.randint(0, diffusion_config['num_timesteps'], (im.shape[0],)).to(device)
 
-    #             bsz = latents.shape[0]
-    #             # Sample a random timestep for each image
-    #             timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=latents.device)
-    #             timesteps = timesteps.long()
+                bsz = latents.shape[0]
+                # Sample a random timestep for each image
+                timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=latents.device)
+                timesteps = timesteps.long()
 
-    #             # Add noise to the latents according to the noise magnitude at each timestep
-    #             # (this is the forward diffusion process)
-    #             noisy_latents = scheduler.add_noise(latents, noise, timesteps)
+                # Add noise to the latents according to the noise magnitude at each timestep
+                # (this is the forward diffusion process)
+                noisy_latents = scheduler.add_noise(latents, noise, timesteps)
 
-    #             ## get encoder embeddings
-    #             if 'image' in condition_types:
-    #                 encoder_hidden_states = clip_vision_model(cond_input_mask, return_dict=False)[0]
-    #             else:
-    #                 encoder_hidden_states = text_encoder(test_tokenized_captions, return_dict=False)[0]
+                ## get encoder embeddings
+                if 'image' in condition_types:
+                    encoder_hidden_states = clip_vision_model(cond_input_mask, return_dict=False)[0]
+                else:
+                    encoder_hidden_states = text_encoder(test_tokenized_captions, return_dict=False)[0]
 
-    #             ## predic the noise residual or the velocity
-    #             if scheduler.config.prediction_type == "epsilon":
-    #                 target = noise
-    #             elif scheduler.config.prediction_type == "v_prediction":
-    #                 target = scheduler.get_velocity(latents, noise, timesteps)
-    #             else:
-    #                 raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
+                ## predic the noise residual or the velocity
+                if scheduler.config.prediction_type == "epsilon":
+                    target = noise
+                elif scheduler.config.prediction_type == "v_prediction":
+                    target = scheduler.get_velocity(latents, noise, timesteps)
+                else:
+                    raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
 
-    #            # Predict the noise residual and compute loss or predict the velocity and compute loss
-    #             model_pred = model(noisy_latents, timesteps, encoder_hidden_states, return_dict=False)[0]
+               # Predict the noise residual and compute loss or predict the velocity and compute loss
+                model_pred = model(noisy_latents, timesteps, encoder_hidden_states, return_dict=False)[0]
 
-    #             ## compute loss
-    #             loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                ## compute loss
+                loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
 
-    #             # Gather the losses across all processes for logging (if we use distributed training).
-    #             avg_loss = accelerator.gather(loss.repeat(train_config['ldm_batch_size'])).mean()
-    #             train_loss += avg_loss.item() / train_config['gradient_accumulation_steps']
+                # Gather the losses across all processes for logging (if we use distributed training).
+                avg_loss = accelerator.gather(loss.repeat(train_config['ldm_batch_size'])).mean()
+                train_loss += avg_loss.item() / train_config['gradient_accumulation_steps']
 
-    #             # Backpropagate
-    #             accelerator.backward(loss)
-    #             optimizer.step()
-    #             lr_scheduler.step()
-    #             optimizer.zero_grad()
+                # Backpropagate
+                accelerator.backward(loss)
+                optimizer.step()
+                lr_scheduler.step()
+                optimizer.zero_grad()
                 
 
-    #             progress_bar.update(1)
-    #             logs = {"loss": loss.detach().item()}
-    #             progress_bar.set_postfix(**logs)
+                progress_bar.update(1)
+                logs = {"loss": loss.detach().item()}
+                progress_bar.set_postfix(**logs)
 
-    #     ## Validation - computation of the FID score between real images (train) and generated images (validation)
-    #     # Real images: from the datasete loader of the training set
-    #     # Generated images: from the dataset loader of the validation set on wich i apply the diffusion and the decoder
-    #     time_end = time.time()
-    #     total_time = time_end - time_start
-    #     print(f'epoch:{epoch_idx+1}/{num_epochs} | Loss : {np.mean(losses):.4f} | Time: {total_time:.4f} sec')
+        ## Validation - computation of the FID score between real images (train) and generated images (validation)
+        # Real images: from the datasete loader of the training set
+        # Generated images: from the dataset loader of the validation set on wich i apply the diffusion and the decoder
+        time_end = time.time()
+        total_time = time_end - time_start
+        print(f'epoch:{epoch_idx+1}/{num_epochs} | Loss : {np.mean(losses):.4f} | Time: {total_time:.4f} sec')
 
-    #     # Save the model
-    #     if (epoch_idx+1) % train_config['save_frequency']*2 == 0:
-    #         torch.save(model.state_dict(), os.path.join(save_folder, f'ldm_{epoch_idx+1}.pth'))
-    #         if accelerator.is_main_process:
-    #             accelerate_folder = os.path.join(save_folder, f'accelerator_{epoch_idx+1}')
-    #             accelerator.save_state(accelerate_folder)
-    # accelerator.end_training()
+        # Save the model
+        if (epoch_idx+1) % train_config['save_frequency']*2 == 0:
+            torch.save(model.state_dict(), os.path.join(save_folder, f'ldm_{epoch_idx+1}.pth'))
+            if accelerator.is_main_process:
+                accelerate_folder = os.path.join(save_folder, f'accelerator_{epoch_idx+1}')
+                accelerator.save_state(accelerate_folder)
+    accelerator.end_training()
 
-    # logging.info('Done Training ...')
-    # ## save the config file
-    # with open(os.path.join(save_folder, 'config.yaml'), 'w') as f:
-    #     yaml.dump(config, f)
+    logging.info('Done Training ...')
+    ## save the config file
+    with open(os.path.join(save_folder, 'config.yaml'), 'w') as f:
+        yaml.dump(config, f)
 
 
 if __name__ == '__main__':

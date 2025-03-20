@@ -32,10 +32,10 @@ def get_number_parameter(model):
     """
     num_params = sum(p.numel() for p in model.parameters()) / 1e9
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e9
-    print(f"Total parameters: {num_params:.3f} B")
-    print(f"Trainable parameters: {trainable_params:.3f} B")
+    print(f"Total parameters: {num_params:.5f} B")
+    print(f"Trainable parameters: {trainable_params:.5f} B")
 
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+    # return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 def load_autoencoder(autoencoder_config, dataset_config, device):
     """
