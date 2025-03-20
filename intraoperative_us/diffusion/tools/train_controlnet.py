@@ -84,7 +84,6 @@ def train(par_dir, conf, trial, experiment_name):
 
     #Create the model and scheduler
     scheduler = DDPMScheduler(num_train_timesteps=diffusion_config['num_train_timesteps'])
-    ## print the configuration file of the scheduler
     logging.info(f'Scheduler configuration: {scheduler.config}')
 
     trial_folder = trial
@@ -239,8 +238,26 @@ def train(par_dir, conf, trial, experiment_name):
                     controlnet_cond=cond_input_mask,
                     return_dict=False,
                 )
+                print('ok')
                 
-    #             ## predic the noise residual or the velocity
+                # # Predict the noise residual
+                # model_pred = model(noisy_latents, timesteps,
+                #     encoder_hidden_states=encoder_hidden_states,
+                #     down_block_additional_residuals=[
+                #         sample.to(dtype=weight_dtype) for sample in down_block_res_samples
+                #     ],
+                #     mid_block_additional_residual=mid_block_res_sample.to(dtype=weight_dtype),
+                #     return_dict=False)[0]
+
+                # # Get the target for loss depending on the prediction type
+                # if noise_scheduler.config.prediction_type == "epsilon":
+                #     target = noise
+                # elif noise_scheduler.config.prediction_type == "v_prediction":
+                #     target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                # else:
+                #     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
+
+    #             ## predict the noise residual or the velocity
     #             if scheduler.config.prediction_type == "epsilon":
     #                 target = noise
     #             elif scheduler.config.prediction_type == "v_prediction":
