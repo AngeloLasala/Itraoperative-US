@@ -150,7 +150,7 @@ def train(par_dir, conf, trial, experiment_name):
 
     ## Prepare the training
     num_epochs = train_config['ldm_epochs']
-    optimizer = torch.optim.AdamW(model.parameters(), lr=train_config['ldm_lr'])   # optimizer = Adam(model.parameters(), lr=train_config['ldm_lr'])
+    optimizer = torch.optim.AdamW(model.parameters(), lr=train_config['ldm_lr'])  
     lr_scheduler = get_scheduler(
         diffusion_config['lr_scheduler'],
         optimizer=optimizer,
