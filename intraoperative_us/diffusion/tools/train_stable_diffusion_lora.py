@@ -283,7 +283,6 @@ def train(par_dir, conf, trial, experiment_name):
 
         ## Validation - computation of the FID score between real images (train) and generated images (validation)
         # Real images: from the datasete loader of the training set
-        # Generated images: from the dataset loader of the validation set on wich i apply the diffusion and the decoder
         time_end = time.time()
         total_time = time_end - time_start
         print(f'epoch:{epoch_idx+1}/{num_epochs} | Loss : {np.mean(losses):.4f} | Time: {total_time:.4f} sec')
