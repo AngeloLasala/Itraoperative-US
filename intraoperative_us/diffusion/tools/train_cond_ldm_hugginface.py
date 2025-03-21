@@ -281,6 +281,7 @@ if __name__ == '__main__':
 
     current_directory = os.path.dirname(__file__)
     par_dir = os.path.dirname(current_directory)
+    print(f'Parent directory: {par_dir}')
     configuration = os.path.join(par_dir, 'conf', f'{args.conf}.yaml')
 
     train(par_dir = par_dir,
