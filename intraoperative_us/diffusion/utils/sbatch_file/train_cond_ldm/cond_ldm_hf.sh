@@ -10,7 +10,7 @@
 #SBATCH --account=IscrC_AIM-ORAL    # account name
 
 python -m intraoperative_us.diffusion.tools.train_cond_ldm_hugginface --conf conf_cond_ldm_1\
-          --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
+          --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
           --trial trial_ldm\
           --experiment_name 'small_cond_ldm'\
           --log info
