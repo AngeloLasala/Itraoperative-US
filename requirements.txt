@@ -11,4 +11,4 @@ setuptools==75.8.0
 SimpleITK==2.4.1
 timm==1.0.7
 torchsummary==1.5.1
-tqdm==4.66
+tqdm==4.66.3
