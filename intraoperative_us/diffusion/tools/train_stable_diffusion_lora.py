@@ -278,7 +278,7 @@ def train(par_dir, conf, trial, experiment_name):
                 losses.append(loss.detach().item())
 
                 progress_bar.update(1)
-                logs = {"loss": loss.detach().item()}
+                logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
                 progress_bar.set_postfix(**logs)
 
         ## Validation - computation of the FID score between real images (train) and generated images (validation)
