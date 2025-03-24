@@ -194,7 +194,6 @@ def train(par_dir, conf, trial, experiment_name):
         progress_bar.set_description(f"Epoch {epoch_idx + 1}/{num_epochs}")
 
         time_start = time.time()
-        losses = []
         for data in data_loader:
             cond_input = None
             if len(condition_types) > 0:  ## to be updating
@@ -238,73 +237,67 @@ def train(par_dir, conf, trial, experiment_name):
                     controlnet_cond=cond_input_mask,
                     return_dict=False,
                 )
-                print('ok')
                 
-                # # Predict the noise residual
-                # model_pred = model(noisy_latents, timesteps,
-                #     encoder_hidden_states=encoder_hidden_states,
-                #     down_block_additional_residuals=[
-                #         sample.to(dtype=weight_dtype) for sample in down_block_res_samples
-                #     ],
-                #     mid_block_additional_residual=mid_block_res_sample.to(dtype=weight_dtype),
-                #     return_dict=False)[0]
+                # Predict the noise residual
+                model_pred = model(noisy_latents, timesteps,
+                    encoder_hidden_states=encoder_hidden_states,
+                    down_block_additional_residuals=[
+                        sample.to(dtype=weight_dtype) for sample in down_block_res_samples
+                    ],
+                    mid_block_additional_residual=mid_block_res_sample.to(dtype=weight_dtype),
+                    return_dict=False)[0]
 
-                # # Get the target for loss depending on the prediction type
-                # if noise_scheduler.config.prediction_type == "epsilon":
-                #     target = noise
-                # elif noise_scheduler.config.prediction_type == "v_prediction":
-                #     target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                # else:
-                #     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
+                # Get the target for loss depending on the prediction type
+                if noise_scheduler.config.prediction_type == "epsilon":
+                    target = noise
+                elif noise_scheduler.config.prediction_type == "v_prediction":
+                    target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                else:
+                    raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
 
-    #             ## predict the noise residual or the velocity
-    #             if scheduler.config.prediction_type == "epsilon":
-    #                 target = noise
-    #             elif scheduler.config.prediction_type == "v_prediction":
-    #                 target = scheduler.get_velocity(latents, noise, timesteps)
-    #             else:
-    #                 raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
+                ## predict the noise residual or the velocity
+                if scheduler.config.prediction_type == "epsilon":
+                    target = noise
+                elif scheduler.config.prediction_type == "v_prediction":
+                    target = scheduler.get_velocity(latents, noise, timesteps)
+                else:
+                    raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
 
-    #            # Predict the noise residual and compute loss or predict the velocity and compute loss
-    #             model_pred = model(noisy_latents, timesteps, encoder_hidden_states, return_dict=False)[0]
+                ## compute loss
+                loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
 
-    #             ## compute loss
-    #             loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                # Gather the losses across all processes for logging (if we use distributed training).
+                avg_loss = accelerator.gather(loss.repeat(train_config['ldm_batch_size'])).mean()
+                train_loss += avg_loss.item() / train_config['gradient_accumulation_steps']
 
-    #             # Gather the losses across all processes for logging (if we use distributed training).
-    #             avg_loss = accelerator.gather(loss.repeat(train_config['ldm_batch_size'])).mean()
-    #             train_loss += avg_loss.item() / train_config['gradient_accumulation_steps']
-
-    #             # Backpropagate
-    #             accelerator.backward(loss)
-    #             losses.append(loss.item())
-    #             optimizer.step()
-    #             optimizer.zero_grad()
+                # Backpropagate
+                accelerator.backward(loss)
+                optimizer.step()
+                optimizer.zero_grad()
                 
+                progress_bar.update(1)
+                logs = {"loss": loss.detach().item()}
+                progress_bar.set_postfix(**logs)
 
-    #             progress_bar.update(1)
-    #             logs = {"loss": loss.detach().item()}
-    #             progress_bar.set_postfix(**logs)
+        ## Validation - computation of the FID score between real images (train) and generated images (validation)
+        # Real images: from the datasete loader of the training set
+        # Generated images: from the dataset loader of the validation set on wich i apply the diffusion and the decoder
+        time_end = time.time()
+        total_time = time_end - time_start
+        print(f'epoch:{epoch_idx+1}/{num_epochs} | Loss : {loss.detach().item():.4f} | Time: {total_time:.4f} sec')
 
-    #     ## Validation - computation of the FID score between real images (train) and generated images (validation)
-    #     # Real images: from the datasete loader of the training set
-    #     # Generated images: from the dataset loader of the validation set on wich i apply the diffusion and the decoder
-    #     time_end = time.time()
-    #     total_time = time_end - time_start
-    #     print(f'epoch:{epoch_idx+1}/{num_epochs} | Loss : {np.mean(losses):.4f} | Time: {total_time:.4f} sec')
+        # Save the model
+        if (epoch_idx+1) % train_config['save_frequency'] == 0:
+            torch.save(controlnet.state_dict(), os.path.join(save_folder, f'controlnet_{epoch_idx+1}.pth'))
+            # if accelerator.is_main_process:
+            #     accelerate_folder = os.path.join(save_folder, f'accelerator_{epoch_idx+1}')
+            #     accelerator.save_state(accelerate_folder)
+    accelerator.end_training()
 
-    #     # Save the model
-    #     if (epoch_idx+1) % train_config['save_frequency'] == 0:
-    #         torch.save(model.state_dict(), os.path.join(save_folder, f'ldm_{epoch_idx+1}.pth'))
-    #         if accelerator.is_main_process:
-    #             accelerate_folder = os.path.join(save_folder, f'accelerator_{epoch_idx+1}')
-    #             accelerator.save_state(accelerate_folder)
-    # accelerator.end_training()
-
-    # logging.info('Done Training ...')
-    # ## save the config file
-    # with open(os.path.join(save_folder, 'config.yaml'), 'w') as f:
-    #     yaml.dump(config, f)
+    logging.info('Done Training ...')
+    ## save the config file
+    with open(os.path.join(save_folder, 'config.yaml'), 'w') as f:
+        yaml.dump(config, f)
 
 
 if __name__ == '__main__':
