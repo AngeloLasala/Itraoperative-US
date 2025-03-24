@@ -13,5 +13,5 @@ python -m intraoperative_us.diffusion.tools.train_controlnet --conf conf_control
           --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
           --trial trial_SD_finetuning\
           --type_image ius\
-          --experiment SD_init_sd1.5_cond_empty_text_lora\
+          --experiment Controlnet_sd1.5_empty_text\
           --log warning\
