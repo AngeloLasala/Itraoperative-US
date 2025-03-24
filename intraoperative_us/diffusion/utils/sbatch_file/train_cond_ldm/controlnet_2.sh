@@ -14,4 +14,4 @@ python -m intraoperative_us.diffusion.tools.train_controlnet --conf conf_control
           --trial trial_SD_finetuning\
           --type_image ius\
           --experiment Controlnet_sd1.5_empty_text\
-          --log warning\
+          --log log\
