@@ -22,11 +22,14 @@ import intraoperative_us.diffusion.models.unet_base as unet_base
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS, GeneratedMaskDataset
 from intraoperative_us.diffusion.utils.utils import get_best_model, load_autoencoder, load_unet_model, get_number_parameter
 from torch.utils.data import DataLoader
+from peft import LoraConfig
+from diffusers.training_utils import cast_training_params
 
 import matplotlib.pyplot as plt
 import cv2
 
 import tqdm as tqdm
+
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -224,8 +227,22 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
 
         # conditional ldm
         model = load_unet_model(diffusion_model_config, autoencoder_config, dataset_config, device)
+        if  diffusion_model_config['initialization'] == 'lora':
+            logging.info('SD1.5 initialization + loRA finetuning')
+            unet_lora_config = LoraConfig(
+                r=4,
+                lora_alpha=4,
+                init_lora_weights="gaussian",
+                target_modules=["to_k", "to_q", "to_v", "to_out.0"],
+            )
+            model.add_adapter(unet_lora_config)
+        elif diffusion_model_config['initialization'] == 'random':
+            logging.info('Random initialization')
+        elif diffusion_model_config['initialization'] == 'SD1.5':
+            logging.info('SD1.5 initialization + extensive finetuning')
         model.eval()
         model.load_state_dict(torch.load(os.path.join(model_dir, f'ldm_{epoch}.pth'),map_location=device), strict=False)
+        get_number_parameter(model)
 
     #####################################
 
