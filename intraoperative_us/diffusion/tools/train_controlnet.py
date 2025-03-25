@@ -248,21 +248,13 @@ def train(par_dir, conf, trial, experiment_name):
                     return_dict=False)[0]
 
                 # Get the target for loss depending on the prediction type
-                if noise_scheduler.config.prediction_type == "epsilon":
-                    target = noise
-                elif noise_scheduler.config.prediction_type == "v_prediction":
-                    target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                else:
-                    raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
-
-                ## predict the noise residual or the velocity
                 if scheduler.config.prediction_type == "epsilon":
                     target = noise
                 elif scheduler.config.prediction_type == "v_prediction":
                     target = scheduler.get_velocity(latents, noise, timesteps)
                 else:
-                    raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
-
+                    raise ValueError(f"Unknown prediction type {scheduler.config.prediction_type}")
+ 
                 ## compute loss
                 loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
 
