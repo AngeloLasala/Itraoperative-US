@@ -133,25 +133,25 @@ def train(par_dir, conf, trial, experiment_name):
         )
         return inputs.input_ids
 
-    # save_folder = os.path.join(trial_folder)
-    # if not os.path.exists(save_folder):
-    #     if experiment_name is not None:
-    #         save_folder = os.path.join(trial_folder, experiment_name)
-    #         os.makedirs(save_folder, exist_ok=True)
-    #     else:
-    #         save_folder = os.path.join(save_folder, 'cond_ldm_1')
-    #         os.makedirs(save_folder)
-    # else:
-    #     if experiment_name is not None:
-    #         save_folder = os.path.join(trial_folder, experiment_name)
-    #         os.makedirs(save_folder, exist_ok=True)
-    #     else:
-    #         count = 0
-    #         for folder in os.listdir(trial_folder):
-    #             if folder.startswith('cond_ldm'):
-    #                 count += 1
-    #         save_folder = os.path.join(trial_folder, f'cond_ldm_{count+1}')
-    #         os.makedirs(save_folder)
+    save_folder = os.path.join(trial_folder)
+    if not os.path.exists(save_folder):
+        if experiment_name is not None:
+            save_folder = os.path.join(trial_folder, experiment_name)
+            os.makedirs(save_folder, exist_ok=True)
+        else:
+            save_folder = os.path.join(save_folder, 'cond_ldm_1')
+            os.makedirs(save_folder)
+    else:
+        if experiment_name is not None:
+            save_folder = os.path.join(trial_folder, experiment_name)
+            os.makedirs(save_folder, exist_ok=True)
+        else:
+            count = 0
+            for folder in os.listdir(trial_folder):
+                if folder.startswith('cond_ldm'):
+                    count += 1
+            save_folder = os.path.join(trial_folder, f'cond_ldm_{count+1}')
+            os.makedirs(save_folder)
 
     ## Prepere the models - training only the controlnet
     vae.requires_grad_(False)
