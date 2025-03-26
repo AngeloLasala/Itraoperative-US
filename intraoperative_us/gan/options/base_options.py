@@ -4,11 +4,11 @@
 
 import argparse
 import os
-from util import util
+import logging
+from intraoperative_us.gan.utils import util
 import torch
-import models
-import data
-
+import intraoperative_us.gan.models as models
+import intraoperative_us.gan.data as data
 
 class BaseOptions():
     """This class defines options used during both training and test time.
@@ -29,7 +29,7 @@ class BaseOptions():
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
         parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
         # model parameters
-        parser.add_argument('--model', type=str, default='cycle_gan', help='chooses which model to use. [cycle_gan | pix2pix | test | colorization]')
+        parser.add_argument('--model', type=str, default='pix2pix', help='chooses which model to use. [pix2pix | cycle_gan]')
         parser.add_argument('--input_nc', type=int, default=3, help='# of input image channels: 3 for RGB and 1 for grayscale')
         parser.add_argument('--output_nc', type=int, default=3, help='# of output image channels: 3 for RGB and 1 for grayscale')
         parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in the last conv layer')
@@ -61,6 +61,7 @@ class BaseOptions():
         # wandb parameters
         parser.add_argument('--use_wandb', action='store_true', help='if specified, then init wandb logging')
         parser.add_argument('--wandb_project_name', type=str, default='CycleGAN-and-pix2pix', help='specify wandb project name')
+        parser.add_argument('--log', type=str, default='info', help='set the logging level, defalut is info')
         self.initialized = True
         return parser
 
@@ -84,9 +85,9 @@ class BaseOptions():
         opt, _ = parser.parse_known_args()  # parse again with new defaults
 
         # modify dataset-related parser options
-        dataset_name = opt.dataset_mode
-        dataset_option_setter = data.get_option_setter(dataset_name)
-        parser = dataset_option_setter(parser, self.isTrain)
+        # dataset_name = opt.dataset_mode
+        # dataset_option_setter = data.get_option_setter(dataset_name)
+        # parser = dataset_option_setter(parser, self.isTrain)
 
         # save and return the parser
         self.parser = parser
@@ -138,6 +139,10 @@ class BaseOptions():
                 opt.gpu_ids.append(id)
         if len(opt.gpu_ids) > 0:
             torch.cuda.set_device(opt.gpu_ids[0])
+
+        ## set the logging level
+        logging_dict = {'debug': logging.DEBUG, 'info': logging.INFO, 'warning': logging.WARNING, 'error': logging.ERROR, 'critical': logging.CRITICAL}
+        logging.basicConfig(level=logging_dict[opt.log])
 
         self.opt = opt
         return self.opt
