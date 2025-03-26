@@ -21,29 +21,54 @@ See frequently asked questions at: https://github.com/junyanz/pytorch-CycleGAN-a
 """
 import time
 import logging
+
+from torch.utils.data import DataLoader
+
 from intraoperative_us.gan.options.train_options import TrainOptions
+from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
 from intraoperative_us.gan.models import create_model
 
 if __name__ == '__main__':
-    opt = TrainOptions().parse()   # get training options
-    # dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
-    # dataset_size = len(dataset)    # get the number of images in the dataset.
-    logging.info('The number of training images ')#= %d' % dataset_size)
+    ## Training Configuration
+    opt = TrainOptions().parse()
 
-    # model = create_model(opt)      # create a model given opt.model and other options
-    # model.setup(opt)               # regular setup: load and print networks; create schedulers
-    # visualizer = Visualizer(opt)   # create a visualizer that display/save images and plots
-    # total_iters = 0                # the total number of training iterations
+    ## Load dataset
+    # Load the dataset
+    condition_config = {'condition_types': 'image',
+                        'image_condition_config': {'image_condition_input_channels': 1,  'image_condition_output_channels': 3,  ## for gan is useless
+                                                   'image_condition_h': 256, 'image_condition_w': 256}}
+    data_img = IntraoperativeUS(size= [opt.crop_size, opt.crop_size],
+                               dataset_path = opt.dataset_path,
+                               im_channels = opt.input_nc,
+                               splitting_json=opt.splitting_json,
+                               split='train',
+                               splitting_seed=opt.splitting_seed,
+                               train_percentage=opt.train_percentage,
+                               val_percentage=opt.val_percentage,
+                               test_percentage=opt.test_percentage,
+                               condition_config=condition_config,
+                               data_augmentation=True
+                               )
 
-    # for epoch in range(opt.epoch_count, opt.n_epochs + opt.n_epochs_decay + 1):    # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
-    #     epoch_start_time = time.time()  # timer for entire epoch
-    #     iter_data_time = time.time()    # timer for data loading per iteration
-    #     epoch_iter = 0                  # the number of training iterations in current epoch, reset to 0 every epoch
-    #     model.update_learning_rate()    # update learning rates in the beginning of every epoch.
-    #     for i, data in enumerate(dataset):  # inner loop within one epoch
-    #         iter_start_time = time.time()  # timer for computation per iteration
-    #         if total_iters % opt.print_freq == 0:
-    #             t_data = iter_start_time - iter_data_time
+    data_loader = DataLoader(data_img, batch_size=opt.batch_size, shuffle=True, num_workers=8)
+    dataset_size = len(data_img)
+    logging.info(f'len of the dataset: {dataset_size}')
+
+    ## Create model
+    model = create_model(opt)      # create a model given opt.model and other options
+    model.setup(opt)               # regular setup: load and print networks; create schedulers
+    total_iters = 0                # the total number of training iterations
+
+    for epoch in range(opt.epoch_count, opt.n_epochs + opt.n_epochs_decay + 1):    # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
+        epoch_start_time = time.time()  # timer for entire epoch
+        iter_data_time = time.time()    # timer for data loading per iteration
+        epoch_iter = 0                  # the number of training iterations in current epoch, reset to 0 every epoch
+        model.update_learning_rate()    # update learning rates in the beginning of every epoch.
+        for i, data in enumerate(dataset):  # inner loop within one epoch
+            iter_start_time = time.time()  # timer for computation per iteration
+            print(data)
+            if total_iters % opt.print_freq == 0:
+                t_data = iter_start_time - iter_data_time
 
     #         total_iters += opt.batch_size
     #         epoch_iter += opt.batch_size
