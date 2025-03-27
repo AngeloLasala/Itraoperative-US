@@ -142,8 +142,8 @@ if __name__ == '__main__':
         losses_dict['D_fake'].append(np.mean(d_fake))
         
         if epoch % opt.save_epoch_freq == 0:              # cache our model every <save_epoch_freq> epochs
-            torch.save(model.netG.state_dict(), os.path.join(save_folder_models, f'netG_{epoch}.pth'))
-            torch.save(model.netD.state_dict(), os.path.join(save_folder_models, f'netD_{epoch}.pth'))
+            model.save_networks('latest')
+            model.save_networks(epoch)
 
     with open(os.path.join(save_folder, 'losses.json'), 'w') as f:
         json.dump(losses_dict, f, indent=4)
