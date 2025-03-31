@@ -125,6 +125,7 @@ if __name__ == '__main__':
             model.optimize_parameters()   # calculate loss functions, get gradients, update network weights
 
             if total_iters % (opt.display_freq * dataset_size) == 0:   # display images on visdom and save images to a HTML file
+                print('Visualizing')
                 visualize_results(model, epoch, save_folder_images)
              
             progress_bar.update(1)
@@ -142,8 +143,8 @@ if __name__ == '__main__':
         losses_dict['D_fake'].append(np.mean(d_fake))
         
         if epoch % opt.save_epoch_freq == 0:              # cache our model every <save_epoch_freq> epochs
-            model.save_networks('latest')
-            model.save_networks(epoch)
+            torch.save(model.netG.state_dict(), os.path.join(save_folder_models, f'netG_{epoch}.pth'))
+            torch.save(model.netD.state_dict(), os.path.join(save_folder_models, f'netD_{epoch}.pth'))
 
     with open(os.path.join(save_folder, 'losses.json'), 'w') as f:
         json.dump(losses_dict, f, indent=4)
