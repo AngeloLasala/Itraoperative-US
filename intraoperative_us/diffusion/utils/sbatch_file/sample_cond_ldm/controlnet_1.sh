@@ -19,6 +19,7 @@ for trial in trial_SD_finetuning; do
                         --experiment Controlnet_sd1.5_empty_text\
                         --epoch $epoch\
                         --guide_w $w\
+                        --log info\
 
          done
     done
