@@ -173,7 +173,7 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
         
         ims = torch.clamp(ims, -1., 1.).detach().cpu()
         ims = (ims + 1) / 2
-        if 'controlnet' in condition_types: mask = cond_input['image'].detach().cpu()
+        if 'controlnet' in condition_types: mask = cond_input[key].detach().cpu()
 
         for i in range(ims.shape[0]):
             cv2.imwrite(os.path.join(ius_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
