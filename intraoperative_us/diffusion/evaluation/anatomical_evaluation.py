@@ -9,6 +9,8 @@ import pickle
 import logging
 
 import cv2
+import pandas as pd
+import seaborn as sns
 import torch
 import torchvision
 import yaml
@@ -16,6 +18,7 @@ import numpy as np
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from scipy import stats
 
 from intraoperative_us.diffusion.evaluation.investigate_vae import get_config_value, get_best_model
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS, GenerateDataset
@@ -112,12 +115,17 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
     gen_tumor_list, gen_not_tumor_list = [], []
     for i, data in enumerate(data_loader_gen):
         # plt the generated image and the mask
-        img = data[0]
-        mask = data[1]
-        tumor, not_tumor = tumor_not_tumor_tissue(img[0,0,:,:].cpu().numpy(), mask[0,0,:,:].cpu().numpy())
-        gen_tumor_list.append(tumor)
-        gen_not_tumor_list.append(not_tumor)
-        # tumor, not_tumor = tumor_not_tumor_tissue(gen_img[0,:,:].cpu().numpy(), mask[0,:,:].cpu().numpy())
+        if i < len(data_loader):
+            img = data[0]
+            mask = data[1]
+            tumor, not_tumor = tumor_not_tumor_tissue(img[0,0,:,:].cpu().numpy(), mask[0,0,:,:].cpu().numpy())
+            gen_tumor_list.append(tumor)
+            gen_not_tumor_list.append(not_tumor)
+            print(i)
+        else:
+            break
+            # tumor, not_tumor = tumor_not_tumor_tissue(gen_img[0,:,:].cpu().numpy(), mask[0,:,:].cpu().numpy())
+
 
     # from a list of list to a single list
     real_tumor_list = [item for sublist in real_tumor_list for item in sublist]
@@ -125,18 +133,36 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
     gen_tumor_list = [item for sublist in gen_tumor_list for item in sublist]
     gen_not_tumor_list = [item for sublist in gen_not_tumor_list for item in sublist]
 
-
-    fig, ax = plt.subplots(1, 2, figsize=(16,10), tight_layout=True)
-
-    # Real image
+    fig, ax = plt.subplots(1, 2, figsize=(18,10), num='Analysis_Tumor_not_Tumor', tight_layout=True)
     bins = np.linspace(0, 1, 50)
+    stat, p = stats.ranksums(real_tumor_list, gen_tumor_list)
+    ax[0].set_title(f'Tumor - p-value={p:.4f}', fontsize=30)
+    ax[0].hist(real_tumor_list, bins=bins, label=f'Real data', alpha=0.5, density=True)
+    ax[0].hist(gen_tumor_list,  bins=bins, label='Gen data', alpha=0.5, density=True)
+    ax[0].set_xlabel('Pixel Intensity', fontsize=30)
+    ax[0].tick_params(axis='both', which='major', labelsize=30)
+    ax[0].legend(fontsize=30)
+    ax[0].grid(linestyle=':')
+
+    stat, p = stats.ranksums(real_not_tumor_list, gen_not_tumor_list)
+    ax[1].set_title(f'Not tumor - p-value={p:.4f}', fontsize=30)
+    ax[1].hist(real_not_tumor_list, bins=bins, label=f'Real data', alpha=0.5)
+    ax[1].hist(gen_not_tumor_list,  bins=bins, label='Gen data', alpha=0.5)
+    ax[1].set_xlabel('Not tumor size', fontsize=30)
+    ax[1].tick_params(axis='both', which='major', labelsize=30)
+    ax[1].legend(fontsize=30)
+    ax[1].grid(linestyle=':')
+
+    
+    fig, ax = plt.subplots(1, 2, figsize=(18,10), num='Hist_Tumor_not_Tumor', tight_layout=True)
     ax[0].set_title('Real image', fontsize=30)
     ax[0].hist(real_tumor_list, alpha=0.5, bins=bins, label='tumor', density=True)
     ax[0].hist(real_not_tumor_list, alpha=0.5, bins=bins, label='not tumor', density=True)
     ax[0].legend(fontsize=26)
     ax[0].tick_params(axis='both', which='major', labelsize=26)
-    ax[0].set_xlabel('Pixels Intensity', fontsize=28)
+    ax[0].set_xlabel('Pixel Intensity', fontsize=28)
     ax[0].set_ylabel('Frequency (%)', fontsize=28)
+    ax[0].set_ylim([0, 10.5])
     ax[0].grid(linestyle=':')
 
     # Generated image
@@ -146,6 +172,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
     ax[1].legend(fontsize=26)
     ax[1].tick_params(axis='both', which='major', labelsize=26)
     ax[1].set_xlabel('Pixels Intensity', fontsize=28)
+    ax[1].set_ylim([0, 10.5])
     ax[1].set_ylabel('Frequency (%)', fontsize=28)
     ax[1].grid(linestyle=':')
     plt.show()
