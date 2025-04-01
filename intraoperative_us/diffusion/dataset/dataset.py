@@ -435,7 +435,6 @@ class GenerateDataset(torch.utils.data.Dataset):
         if self.mask:
             mask_numb = image_path.split('/')[-1].split('.')[0].split('_')[1]
             mask_path = os.path.join(self.get_mask_images(), f'mask_{mask_numb}.png')
-            print(mask_path.split('/')[-1], image_path.split('/')[-1])
             mask = Image.open(mask_path)
             mask = resize(mask)
             mask = mask.convert('L')
@@ -450,7 +449,6 @@ class GenerateDataset(torch.utils.data.Dataset):
         """
         retrive the path 'eco' from current directory
         """
-        print(self.scheduler)
         data_ius = os.path.join(self.par_dir, self.trial, self.experiment, f'w_{self.guide_w}', self.scheduler, f'samples_ep_{self.epoch}','ius')
         return data_ius
 
