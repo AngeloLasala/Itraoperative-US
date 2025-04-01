@@ -119,52 +119,64 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
             if 'image' in condition_types or 'controlnet' in condition_types:
 
                 cond_input_mask = cond_input[key].to(device, dtype=weight_dtype)
+                uncond_input_mask = uncond_input[key].to(device, dtype=weight_dtype)
+
                 ## check the device of variable
-                down_block_res_samples, mid_block_res_sample = controlnet(
+                down_block_res_samples_cond, mid_block_res_sample_cond = controlnet(
                     xt,
                     t,
                     encoder_hidden_states=encoder_hidden_states,
                     controlnet_cond=cond_input_mask,
                     return_dict=False,
+                    guess_mode=True,  ## this is for the scaling factor regard the resolution
                 )
-                for i, dd in enumerate(down_block_res_samples):
-                    print(f"down_block_res_samples {i} {dd.shape}")
 
-                for i, mm in enumerate(mid_block_res_sample):
-                    print(f"mid_block_res_sample {i} {mm.shape}")
+                down_block_res_samples_uncond, mid_block_res_sample_uncond = controlnet(
+                    xt,
+                    t,
+                    encoder_hidden_states=encoder_hidden_states,
+                    controlnet_cond=uncond_input_mask,
+                    return_dict=False,
+                    guess_mode=True,  ## this is for the scaling factor regard the resolution
+                )
 
-                print()
                 
-        #         ## with image cond using CFG
-        #         with torch.no_grad():
-        #             noise_pred_cond = model(xt, t, text_embeddings, return_dict=False)[0]   ## get the noise prediction for the conditional model
-        #             noise_pred_uncond = model(xt, t, text_embeddings, return_dict=False)[0]  ## get the noise prediction for the conditional and unconditional model
+                ## with image cond using CFG
+                with torch.no_grad():
+                    noise_pred_cond = model(xt, t, encoder_hidden_states, 
+                                            down_block_additional_residuals=[sample.to(dtype=weight_dtype) for sample in down_block_res_samples_cond],
+                                            mid_block_additional_residual=mid_block_res_sample_cond.to(dtype=weight_dtype),
+                                            return_dict=False)[0]   ## get the noise prediction for the conditional model
+                    noise_pred_uncond = model(xt, t, encoder_hidden_states,
+                                            down_block_additional_residuals=[sample.to(dtype=weight_dtype) for sample in down_block_res_samples_uncond],
+                                            mid_block_additional_residual=mid_block_res_sample_uncond.to(dtype=weight_dtype),
+                                            return_dict=False)[0]  ## get the noise prediction for the conditional and unconditional model
 
-        #         ## sampling the noise for the conditional and unconditional model
-        #         noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
+                ## sampling the noise for the conditional and unconditional model
+                noise_pred = (1 + guide_w) * noise_pred_cond - guide_w * noise_pred_uncond
      
-        #     else:
-        #         ## with yexy is uncoditional by construction
-        #         with torch.no_grad():
-        #             noise_pred = model(xt, t, text_embeddings, return_dict=False)[0]
+            else:
+                ## with yexy is uncoditional by construction
+                with torch.no_grad():
+                    noise_pred = model(xt, t, encoder_hidden_states, return_dict=False)[0]
 
-        #     # Use scheduler to get x0 and xt-1
-        #     # xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
-        #     xt = scheduler.step(noise_pred, t, xt).prev_sample
+            # Use scheduler to get x0 and xt-1
+            # xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
+            xt = scheduler.step(noise_pred, t, xt).prev_sample
                     
-        # xt = xt * (1 / vae.config.scaling_factor)
-        # with torch.no_grad():
-        #     if type_model == 'vae':
-        #         ims = vae.decode(xt).sample
+        xt = xt * (1 / vae.config.scaling_factor)
+        with torch.no_grad():
+            if type_model == 'vae':
+                ims = vae.decode(xt).sample
         
-        # ims = torch.clamp(ims, -1., 1.).detach().cpu()
-        # ims = (ims + 1) / 2
-        # if 'image' in condition_types: mask = cond_input['image'].detach().cpu()
+        ims = torch.clamp(ims, -1., 1.).detach().cpu()
+        ims = (ims + 1) / 2
+        if 'image' in condition_types: mask = cond_input['image'].detach().cpu()
 
-        # for i in range(ims.shape[0]):
-        #     cv2.imwrite(os.path.join(ius_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
-        #     if 'image' in condition_types:
-        #         cv2.imwrite(os.path.join(mask_folder, f'mask_{btc * train_config["ldm_batch_size_sample"] + i}.png'), mask[i].numpy()[0]*255)
+        for i in range(ims.shape[0]):
+            cv2.imwrite(os.path.join(ius_folder, f'x0_{btc * train_config["ldm_batch_size_sample"] + i}.png'), ims[i].numpy()[0]*255)
+            if 'image' in condition_types:
+                cv2.imwrite(os.path.join(mask_folder, f'mask_{btc * train_config["ldm_batch_size_sample"] + i}.png'), mask[i].numpy()[0]*255)
 
 def infer(par_dir, conf, trial, experiment, epoch, guide_w, generated_mask_dir):
     # Read the config file #
@@ -263,8 +275,8 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, generated_mask_dir):
         model.eval()
         controlnet_config = condition_config['controlnet_condition_config']
         pretrained_model_path = os.path.join(par_dir, 'ius', trial, controlnet_config['pretrained_model_experiment'], f"ldm_{controlnet_config['pretrained_model_epoch']}.pth")
+        model.load_state_dict(torch.load(pretrained_model_path, map_location=device), strict=False)
         logging.info(f'Load pretrained model {pretrained_model_path}')
-        # model.load_state_dict(torch.load(pretrained_model_path, map_location=device), strict=False)
 
         # load controlnet
         logging.info("Load controlnet")
@@ -273,8 +285,6 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, generated_mask_dir):
         controlnet.load_state_dict(torch.load(os.path.join(model_dir, f'controlnet_{epoch}.pth'), map_location=device))
 
         logging.info(f'Load controlnet {os.path.join(model_dir, f"controlnet_{epoch}.pth")}')
-        print(get_number_parameter(controlnet))
-
     #####################################
 
     ######## Create output directories #############
