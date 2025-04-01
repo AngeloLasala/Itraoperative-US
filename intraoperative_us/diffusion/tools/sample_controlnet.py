@@ -101,7 +101,9 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
         if 'image' in condition_types or 'controlnet' in condition_types:
             cond_input_image = cond_input[key]
             cond_input[key] = cond_input_image.repeat(1,3,1,1)
-            cond_input_mask = image_processor(images=cond_input[key], return_tensors="pt", do_rescale=False).pixel_values.to(device)
+
+            uncond_input_image = uncond_input[key]
+            uncond_input[key] = uncond_input_image.repeat(1,3,1,1)
 
             # test token for Stable Diffusion
             test_tokenized_captions = tokenize_captions(xt.shape[0]).to(device)
