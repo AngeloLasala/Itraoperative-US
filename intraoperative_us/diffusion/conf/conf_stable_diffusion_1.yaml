@@ -77,7 +77,7 @@ ldm_params:
   unet_path: "/leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/models"
   ## 'random' -> random initialization
   ## 'SD1.5'  -> SD1.5 initialization from hugginface - for exstensive fine-tuning
-  initialization: 'SD1.5'
+  initialization: 'random'
   # in_channels: 4,  i.e. z_channels
   # out_channels: 4, i.e. z_channels
   sample_size: 32                           ## shape of the input of autoencoder
@@ -109,7 +109,7 @@ ldm_params:
 
 train_params:
   seed : 1111
-  ldm_batch_size: 16
+  ldm_batch_size: 32
   ldm_batch_size_sample: 32
   autoencoder_batch_size: 8   # 2: local for shape (240,320) - 4 or 8: cineca for shape (240, 320)
   disc_start: 8
@@ -126,6 +126,6 @@ train_params:
   autoencoder_lr: 0.0001
   autoencoder_acc_steps : 1
   autoencoder_img_save_steps : 8
-  save_frequency : 1500
+  save_frequency : 1000
   mixed_precision : 'fp16'
   gradient_accumulation_steps: 8
