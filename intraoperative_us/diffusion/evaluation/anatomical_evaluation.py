@@ -46,17 +46,34 @@ torch.cuda.manual_seed_all(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-def tumor_not_tumor_tissue(ius, mask):
+def tumor_not_tumor_tissue(ius, mask, show_plot=False):
     """
     Compute the tumor and not tumor bool mask
     """
 
     tumor_mask = mask > 0
-    background_mask = ius < -0.99
+    background_mask = ius < -0.96
     not_tumor =  ~(tumor_mask | background_mask)
 
     tumor_tissue = (ius[tumor_mask] + 1) / 2 
     not_tumor_tissue = (ius[not_tumor] + 1) / 2
+
+    if show_plot:
+        plt.figure(figsize=(18,12), num='tumor_not_tumor', tight_layout=True)
+        plt.subplot(1,3,1)
+        plt.title('Tumor', fontsize=30) 
+        plt.imshow(tumor_mask, cmap='Oranges')
+        plt.axis('off') 
+        plt.subplot(1,3,2)
+        plt.title('Not tumor', fontsize=30)
+        plt.imshow(not_tumor, cmap='Greens')
+        plt.axis('off')
+        plt.subplot(1,3,3)
+        plt.title('iUS', fontsize=30)
+        plt.imshow(ius, cmap='gray')
+        plt.axis('off')
+        plt.show()
+
     return tumor_tissue, not_tumor_tissue
 
     
@@ -107,7 +124,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
     for i, data in enumerate(data_loader):
         img = data[0]
         mask = data[1]['image']
-        tumor, not_tumor = tumor_not_tumor_tissue(img[0,0,:,:].cpu().numpy(), mask[0,0,:,:].cpu().numpy())
+        tumor, not_tumor = tumor_not_tumor_tissue(img[0,0,:,:].cpu().numpy(), mask[0,0,:,:].cpu().numpy(), show_plot=False) 
         real_tumor_list.append(tumor)
         real_not_tumor_list.append(not_tumor)
 
@@ -118,10 +135,9 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
         if i < len(data_loader):
             img = data[0]
             mask = data[1]
-            tumor, not_tumor = tumor_not_tumor_tissue(img[0,0,:,:].cpu().numpy(), mask[0,0,:,:].cpu().numpy())
+            tumor, not_tumor = tumor_not_tumor_tissue(img[0,0,:,:].cpu().numpy(), mask[0,0,:,:].cpu().numpy(), show_plot=show_gen_mask)
             gen_tumor_list.append(tumor)
             gen_not_tumor_list.append(not_tumor)
-            print(i)
         else:
             break
             # tumor, not_tumor = tumor_not_tumor_tissue(gen_img[0,:,:].cpu().numpy(), mask[0,:,:].cpu().numpy())
@@ -137,18 +153,21 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
     bins = np.linspace(0, 1, 50)
     stat, p = stats.ranksums(real_tumor_list, gen_tumor_list)
     ax[0].set_title(f'Tumor - p-value={p:.4f}', fontsize=30)
-    ax[0].hist(real_tumor_list, bins=bins, label=f'Real data', alpha=0.5, density=True)
-    ax[0].hist(gen_tumor_list,  bins=bins, label='Gen data', alpha=0.5, density=True)
+    ax[0].hist(real_tumor_list, bins=bins, label=f'Real data', color='C3', alpha=0.5, density=True)
+    ax[0].hist(gen_tumor_list,  bins=bins, label='Gen data', color='C1', alpha=0.5, density=True)
     ax[0].set_xlabel('Pixel Intensity', fontsize=30)
+    ax[0].set_ylabel('Frequency (%)', fontsize=30)
     ax[0].tick_params(axis='both', which='major', labelsize=30)
+    ax[0].set_ylim([0, 10.5])
     ax[0].legend(fontsize=30)
     ax[0].grid(linestyle=':')
 
     stat, p = stats.ranksums(real_not_tumor_list, gen_not_tumor_list)
     ax[1].set_title(f'Not tumor - p-value={p:.4f}', fontsize=30)
-    ax[1].hist(real_not_tumor_list, bins=bins, label=f'Real data', alpha=0.5)
-    ax[1].hist(gen_not_tumor_list,  bins=bins, label='Gen data', alpha=0.5)
+    ax[1].hist(real_not_tumor_list, bins=bins, label=f'Real data', color='blue', alpha=0.5, density=True)
+    ax[1].hist(gen_not_tumor_list,  bins=bins, label='Gen data', color='green',alpha=0.5, density=True)
     ax[1].set_xlabel('Not tumor size', fontsize=30)
+    ax[1].set_ylim([0, 10.5])
     ax[1].tick_params(axis='both', which='major', labelsize=30)
     ax[1].legend(fontsize=30)
     ax[1].grid(linestyle=':')
@@ -156,19 +175,18 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
     
     fig, ax = plt.subplots(1, 2, figsize=(18,10), num='Hist_Tumor_not_Tumor', tight_layout=True)
     ax[0].set_title('Real image', fontsize=30)
-    ax[0].hist(real_tumor_list, alpha=0.5, bins=bins, label='tumor', density=True)
-    ax[0].hist(real_not_tumor_list, alpha=0.5, bins=bins, label='not tumor', density=True)
+    ax[0].hist(real_tumor_list, alpha=0.5, bins=bins, color='C3', label='tumor', density=True)
+    ax[0].hist(real_not_tumor_list, alpha=0.5, bins=bins, color='blue', label='not tumor', density=True)
     ax[0].legend(fontsize=26)
     ax[0].tick_params(axis='both', which='major', labelsize=26)
     ax[0].set_xlabel('Pixel Intensity', fontsize=28)
     ax[0].set_ylabel('Frequency (%)', fontsize=28)
     ax[0].set_ylim([0, 10.5])
     ax[0].grid(linestyle=':')
-
     # Generated image
     ax[1].set_title('Generated image', fontsize=30)
-    ax[1].hist(gen_tumor_list, alpha=0.5, bins=bins, label='tumor', density=True)
-    ax[1].hist(gen_not_tumor_list, alpha=0.5, bins=bins, label='not tumor', density=True)
+    ax[1].hist(gen_tumor_list, alpha=0.5, bins=bins, color='C1', label='tumor', density=True)
+    ax[1].hist(gen_not_tumor_list, alpha=0.5, bins=bins,  color='green', label='not tumor', density=True)
     ax[1].legend(fontsize=26)
     ax[1].tick_params(axis='both', which='major', labelsize=26)
     ax[1].set_xlabel('Pixels Intensity', fontsize=28)
