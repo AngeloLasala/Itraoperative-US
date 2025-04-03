@@ -11,7 +11,7 @@
 
 for trial in trial_SD_finetuning trial_SD_random; do
     for w in -1.0; do
-        for epoch in 3000 5000 7000 8000 9000 ; do
+        for epoch in 5000 7000 8000 9000 ; do
                 python -m intraoperative_us.diffusion.tools.sample_stable_diffusion\
                         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
                         --generated_mask_dir "/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion/mask/small_vae/uncond_ldm_1/w_-1.0/ddpm/samples_ep_3000"\
