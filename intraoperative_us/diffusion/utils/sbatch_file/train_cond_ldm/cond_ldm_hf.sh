@@ -9,8 +9,8 @@
 #SBATCH --output=big_ldm_hf.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL    # account name
 
-python -m intraoperative_us.diffusion.tools.train_cond_ldm_hugginface --conf conf_cond_ldm_2\
+python -m intraoperative_us.diffusion.tools.train_cond_ldm_hugginface --conf conf_cond_ldm_1\
           --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
           --trial trial_ldm\
-          --experiment_name 'big_cond_ldm'\
+          --experiment_name 'small_finetuning'\
           --log info
