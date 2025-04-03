@@ -6,7 +6,7 @@
 #SBATCH --time=24:00:00                 # time limits: 1 hour
 #SBATCH --partition=boost_usr_prod   # partition name
 #SBATCH --error=fine_random_2.err       # standard error file
-#SBATCH --output=fine__random_2.out      # standard output file
+#SBATCH --output=fine_random_2.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name 
 
 for trial in trial_SD_finetuning trial_SD_random; do
