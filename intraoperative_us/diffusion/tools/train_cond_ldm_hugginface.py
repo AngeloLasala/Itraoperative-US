@@ -234,7 +234,7 @@ def train(par_dir, conf, trial, experiment_name):
 
                 # Backpropagate
                 accelerator.backward(loss)
-                losses.append(loss.item())
+                losses.append(loss.detach().item())
                 optimizer.step()
                 optimizer.zero_grad()
                 
