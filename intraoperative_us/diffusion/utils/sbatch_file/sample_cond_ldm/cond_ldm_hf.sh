@@ -11,12 +11,12 @@
 
 for trial in trial_ldm; do
     for w in  3.0 5.0 7.0; do
-        for epoch in 3000 4500 6000 7500 9000 ; do
+        for epoch in 5000 7000 8000 9000 ; do
                 python -m intraoperative_us.diffusion.tools.sample_cond_ldm_hugginface\
                         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
                         --generated_mask_dir "/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion/mask/small_vae/uncond_ldm_1/w_-1.0/ddpm/samples_ep_3000"\
                         --trial $trial\
-                        --experiment small_cond_ldm\
+                        --experiment small_finetuning\
                         --epoch $epoch\
                         --guide_w $w\
 
