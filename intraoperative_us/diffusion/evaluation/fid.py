@@ -393,9 +393,9 @@ if __name__ == "__main__":
         fig,ax = plt.subplots(nrows=1, ncols=1, figsize=(8,5), num=f'FID score', tight_layout=True)
         ax.plot(list(fid.keys()), list(fid.values()), marker='o', color='b')
         ax.set_xlabel('Epoch', fontsize=20)
-        ax.set_ylabel('FID', fontsize=20)
+        ax.set_ylabel(f'FID', fontsize=20)
         ax.tick_params(axis='both', which='major', labelsize=16)
-        ax.grid('dotted')
+        ax.grid(linestyle=':')
         plt.savefig(os.path.join(experiment_dir, 'FID_score.png'))
         plt.show()
  
