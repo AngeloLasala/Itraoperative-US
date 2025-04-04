@@ -5,8 +5,8 @@
 #SBATCH --ntasks-per-node=1          # 1 tasks per node
 #SBATCH --time=24:00:00                 # time limits: 1 hour
 #SBATCH --partition=boost_usr_prod   # partition name
-#SBATCH --error=sample_cond_hf.err       # standard error file
-#SBATCH --output=sample_cond_hf.out      # standard output file
+#SBATCH --error=small_fine.err       # standard error file
+#SBATCH --output=small_fine.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
 for trial in trial_ldm; do
