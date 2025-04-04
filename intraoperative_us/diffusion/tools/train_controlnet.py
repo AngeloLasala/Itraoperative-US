@@ -131,7 +131,8 @@ def train(par_dir, conf, trial, experiment_name):
         model.load_state_dict(torch.load(os.path.join(trial_folder, model_experiment, f'ldm_{epoch_model}.pth'),map_location=device))
 
         logging.info("Initializing controlnet weights from unet")
-        controlnet = ControlNetModel.from_unet(model)
+        model_int = load_unet_model(diffusion_model_config_for_model, autoencoder_config_for_model, dataset_config, device)
+        controlnet = ControlNetModel.from_unet(model_int)
     else:
         ## raise an error
         raise ValueError('Condition type not implemented, please provide the controlnet configuration')
