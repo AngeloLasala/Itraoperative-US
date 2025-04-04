@@ -19,6 +19,7 @@ from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers.optimization import get_scheduler
 from accelerate import Accelerator
 import torch.nn.functional as F
+from peft import LoraConfig
 
 from intraoperative_us.diffusion.models.unet_cond_base import get_config_value
 from intraoperative_us.diffusion.scheduler.scheduler import LinearNoiseScheduler
