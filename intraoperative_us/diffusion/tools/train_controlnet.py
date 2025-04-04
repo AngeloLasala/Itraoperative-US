@@ -114,8 +114,21 @@ def train(par_dir, conf, trial, experiment_name):
             diffusion_model_config_for_model = config_for_model['ldm_params']
         epoch_model = condition_config['controlnet_condition_config']['pretrained_model_epoch']
         model = load_unet_model(diffusion_model_config_for_model, autoencoder_config_for_model, dataset_config, device)
+        if  diffusion_model_config['initialization'] == 'lora':
+            logging.info('SD1.5 initialization + loRA finetuning')
+            unet_lora_config = LoraConfig(
+                r=4,
+                lora_alpha=4,
+                init_lora_weights="gaussian",
+                target_modules=["to_k", "to_q", "to_v", "to_out.0"],
+            )
+            model.add_adapter(unet_lora_config)
+        elif diffusion_model_config['initialization'] == 'SD1.5':
+            logging.info('SD1.5 initialization')
+        elif diffusion_model_config['initialization'] == 'random':
+            logging.info('Random initialization')
         model.load_state_dict(torch.load(os.path.join(trial_folder, model_experiment, f'ldm_{epoch_model}.pth'),map_location=device))
-    
+
         logging.info("Initializing controlnet weights from unet")
         controlnet = ControlNetModel.from_unet(model)
     else:
