@@ -16,7 +16,7 @@ for trial in trial_ldm; do
                         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
                         --generated_mask_dir "/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion/mask/small_vae/uncond_ldm_1/w_-1.0/ddpm/samples_ep_3000"\
                         --trial $trial\
-                        --experiment small_finetuning\
+                        --experiment big_finetuning\
                         --epoch $epoch\
                         --guide_w $w\
 
