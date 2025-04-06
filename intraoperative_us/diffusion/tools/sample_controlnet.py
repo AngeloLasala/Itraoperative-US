@@ -282,7 +282,8 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, generated_mask_dir):
 
         # load controlnet
         logging.info("Load controlnet")
-        controlnet = ControlNetModel.from_unet(model).to(device)
+        model_int = load_unet_model(diffusion_model_config_for_model, autoencoder_config_for_model, dataset_config, device)
+        controlnet = ControlNetModel.from_unet(model_int).to(device)
         controlnet.eval()
         controlnet.load_state_dict(torch.load(os.path.join(model_dir, f'controlnet_{epoch}.pth'), map_location=device))
 
