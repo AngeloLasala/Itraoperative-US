@@ -196,52 +196,8 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
     plt.show()
     
 
-    
-
-
-        
-
-
-    # if show_gen_mask:
-    #     data_gen_mask = GenerateDataset(par_dir, trial, experiment, guide_w, scheduler, epoch, 
-    #                                     size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'],
-    #                                     mask=True)
-
-    #     for i, (gen_img, mask) in enumerate(data_gen_mask):
-    #         ## plt the generated image and the mask
-    #         print(gen_img.shape, mask.shape)
-
-    #         tumor, not_tumor = tumor_not_tumor_tissue(gen_img[0,:,:].cpu().numpy(), mask[0,:,:].cpu().numpy())
-
-    #         plt.figure(figsize=(18,12), num=f'tumor_not_tumor_{i}', tight_layout=True)
-    #         plt.hist(tumor, alpha=0.5, label='tumor')
-    #         plt.hist(not_tumor, alpha=0.5, label='not tumor')
-    #         plt.legend()
-
-    #         plt.figure(figsize=(25,12), num=f'gen_mask_{i}', tight_layout=True)
-    #         plt.subplot(1,3,2)
-    #         plt.imshow(gen_img[0,:,:].cpu().numpy(), cmap='gray')
-    #         plt.title('Generated image', fontsize=30)
-    #         plt.axis('off')
-    #         plt.subplot(1,3,1)
-    #         plt.imshow(mask[0,:,:].cpu().numpy(), cmap='gray')
-    #         plt.title('Mask', fontsize=30)
-    #         plt.axis('off')
-    #         plt.subplot(1,3,3)
-    #         plt.imshow(gen_img[0,:,:].cpu().numpy(), cmap='gray')
-    #         tumor_mask = mask[0,:,:].cpu().numpy()
-    #         plt.imshow(np.ma.masked_where(tumor_mask == 0, tumor_mask), cmap='ocean', alpha=0.3)
-    #         plt.title('Generated image with mask', fontsize=30)
-    #         plt.axis('off')
-    #         plt.show() 
-
-
-
-    ##################################################################################################
-
-
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Invastigate the latent space')
+    parser = argparse.ArgumentParser(description='Anatomical evaluation of echogenicity')
     parser.add_argument('--save_folder', type=str, default="/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/trained_model",
                                                    help='folder to save the model')
     parser.add_argument('--type_image', type=str, default='ius', help='type of image to evaluate, ius or mask')
