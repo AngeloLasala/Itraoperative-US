@@ -3,7 +3,7 @@ dataset_params:
   # local path: 
   #            1) "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"
   #            2) cineca: '/leonardo_work/IscrC_AIM-ORAL/Angelo/ius_data/dataset'
-  dataset_path: "/leonardo_work/IscrC_AIM-ORAL/Angelo/ius_data/dataset"  
+  dataset_path: "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"  
   im_channels : 1
   im_size_h : 256         # 256
   im_size_w : 256         # 256 
@@ -22,7 +22,7 @@ diffusion_params:
   scheduler: 'pndm'
   ## local path: '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
   ## cineca: '/leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
-  scheduler_path: /leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/scheduler/
+  scheduler_path: /home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/scheduler/
   prediction_type: 'epsilon'     # v_prediction, epsilon
   num_sample_timesteps : 50
   num_train_timesteps : 1000
@@ -36,7 +36,7 @@ ldm_params:
   unet: unet_cond/UNet2DConditionModel_SD1.5_default     ## path of hugginface model
   ## local : "/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models"
   ## cineca: "/leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/models"
-  unet_path: "/leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/models"
+  unet_path: "/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models"
   # in_channels: 4,  i.e. z_channels
   # out_channels: 4, i.e. z_channels
   sample_size: 32                           ## shape of the input of autoencoder
@@ -74,7 +74,7 @@ autoencoder_params:
    ## '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default' -> architecture from huggingface
    ## cineca: '/leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'
    ## 'scratch -> old version'
-  autoencoder_type: '/leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'         
+  autoencoder_type: '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'         
   ## 'random' -> random initialization, 
   ## 'SD1.5'  -> SD1.5 initialization from hugginface
   ## 'only_D' -> E from SD1.5 and D 
@@ -112,7 +112,7 @@ train_params:
   seed : 1111
   ldm_batch_size: 16
   ldm_batch_size_sample: 32
-  autoencoder_batch_size: 8   # 2: local for shape (240,320) - 4 or 8: cineca for shape (240, 320)
+  autoencoder_batch_size: 2   # 2: local for shape (240,320) - 4 or 8: cineca for shape (240, 320)
   disc_start: 8
   disc_weight: 0.5
   codebook_weight: 1

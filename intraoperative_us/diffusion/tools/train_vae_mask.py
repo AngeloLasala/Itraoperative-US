@@ -20,6 +20,7 @@ import time
 import logging
 from intraoperative_us.diffusion.utils.utils import get_number_parameter, load_autoencoder
 from torchvision.utils import make_grid
+from torch.utils.tensorboard import SummaryWriter
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -70,8 +71,8 @@ def train(conf, save_folder, trial_name):
 
     logging.info(f'len data {len(data)} - len val_data {len(val_data)}')
     
-    data_loader = DataLoader(data, batch_size=train_config['autoencoder_batch_size'], shuffle=True, num_workers=4, timeout=10)
-    val_data_loader = DataLoader(val_data, batch_size=train_config['autoencoder_batch_size'], shuffle=True, num_workers=4, timeout=10)
+    data_loader = DataLoader(data, batch_size=train_config['autoencoder_batch_size'], shuffle=True, num_workers=0, timeout=0)
+    val_data_loader = DataLoader(val_data, batch_size=train_config['autoencoder_batch_size'], shuffle=True, num_workers=0, timeout=0)
 
     # generate save folder
     save_dir = os.path.join(save_folder)
@@ -90,6 +91,7 @@ def train(conf, save_folder, trial_name):
             current_trial = len(os.listdir(save_dir))
             save_dir = os.path.join(save_dir, f'trial_{current_trial + 1}', 'vae')
             os.makedirs(save_dir)
+    writer = SummaryWriter(log_dir=os.path.join(save_dir, 'logs'))
 
       
     # Create the loss and optimizer
@@ -151,13 +153,11 @@ def train(conf, save_folder, trial_name):
                 save_output = torch.clamp(output[:sample_size], 0., 1.).detach().cpu()
                 save_input = (im[:sample_size] ).detach().cpu()
 
-                grid = make_grid(torch.cat([save_input, save_output], dim=0), nrow=sample_size)
-                img = torchvision.transforms.ToPILImage()(grid)
-                plt.figure(figsize=(20, 10), tight_layout=True)
-                plt.imshow(img)
-                plt.axis('off')
-                plt.savefig(os.path.join(save_dir, f'output_{step_count}.png'))
-                plt.close()
+                input_grid = make_grid(save_input, nrow=sample_size)
+                output_grid = make_grid(save_output, nrow=sample_size)
+
+                writer.add_image('Input', input_grid, global_step=step_count)
+                writer.add_image('Output', output_grid, global_step=step_count)
 
             recon_loss = recon_criterion(output, im)
             recon_losses.append(recon_loss.item())
@@ -230,6 +230,18 @@ def train(conf, save_folder, trial_name):
             torch.save(model.state_dict(), os.path.join(save_dir, f'vae_best_{epoch_idx+1}.pth'))
             torch.save(discriminator.state_dict(), os.path.join(save_dir, f'discriminator_best_{epoch_idx+1}.pth'))
         time_end = time.time()
+        
+        # Log training losses
+        writer.add_scalar('Loss/train_recon', np.mean(recon_losses), epoch_idx)
+        writer.add_scalar('Loss/train_kl', np.mean(kl_losses), epoch_idx)
+        writer.add_scalar('Loss/train_lpips', np.mean(perceptual_losses), epoch_idx)
+        writer.add_scalar('Loss/train_disc', np.mean(disc_losses) if disc_losses else 0, epoch_idx)
+        writer.add_scalar('Loss/train_gen', np.mean(gen_losses) if gen_losses else 0, epoch_idx)
+
+        # Log validation losses
+        writer.add_scalar('Loss/val_recon', np.mean(val_recon_losses), epoch_idx)
+        writer.add_scalar('Loss/val_lpips', np.mean(val_perceptual_losses), epoch_idx)
+        
         # Print epoch
         if len(disc_losses) > 0:
             print(f'Epoch {epoch_idx+1}/{num_epochs}) Recon Loss: {np.mean(recon_losses):.4f}| KL Loss: {np.mean(kl_losses):.4f}| LPIPS Loss: {np.mean(perceptual_losses):.4f}| G Loss: {np.mean(gen_losses):.4f}| D Loss: {np.mean(disc_losses):.4f}')
@@ -257,8 +269,7 @@ def train(conf, save_folder, trial_name):
 
             val_losses_epoch['recon'].append(np.mean(val_recon_losses))
             val_losses_epoch['lpips'].append(np.mean(val_perceptual_losses))
-        plt.show()
-
+  
     # save json file of losses
     with open(os.path.join(save_dir, 'losses.json'), 'w') as f:
         json.dump(losses_epoch, f, indent=4)
@@ -316,3 +327,4 @@ if __name__ == '__main__':
     configuration = os.path.join(par_dir, 'conf', f'{args.conf}.yaml')
     save_folder = os.path.join(par_dir, args.save_folder, args.type_images)
     train(conf = configuration, save_folder = save_folder, trial_name = args.trial_name)
+    writer.close()

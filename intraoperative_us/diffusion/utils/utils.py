@@ -71,12 +71,27 @@ def load_autoencoder(autoencoder_config, dataset_config, device):
 
     ## model from Hugginface 
     else:
+        ## set the type of generation -one_step or two_step
+        if 'type_of_generation' in autoencoder_config:
+            type_of_generation = autoencoder_config['type_of_generation']
+            if type_of_generation == 'one_step':
+                in_channels = dataset_config['im_channels'] * 2
+                out_channels = dataset_config['im_channels'] * 2
+            elif type_of_generation == 'two_step':
+                in_channels = dataset_config['im_channels']
+                out_channels = dataset_config['im_channels']
+
+        else: ## defaoult is two_step
+            type_of_generation = 'two_step'
+            in_channels = dataset_config['im_channels']
+            out_channels = dataset_config['im_channels']
+
         ## random initialization
         if initialization == 'random':
             logging.info('Training VAE with random initialization of Hugginface model')
             model = AutoencoderKL(
-                    in_channels=dataset_config['im_channels'],
-                    out_channels=dataset_config['im_channels'],
+                    in_channels=in_channels,
+                    out_channels=out_channels,
                     sample_size=dataset_config['im_size_h'],
                     block_out_channels=autoencoder_config['down_channels'],
                     latent_channels=autoencoder_config.get('latent_channels', 4),  # Default is 4
@@ -100,8 +115,8 @@ def load_autoencoder(autoencoder_config, dataset_config, device):
             
             model = AutoencoderKL.from_pretrained(
             autoencoder_config['autoencoder_type'],
-            in_channels=dataset_config['im_channels'],
-            out_channels=dataset_config['im_channels'],
+            in_channels=in_channels,
+            out_channels=out_channels,
             sample_size=dataset_config['im_size_h'],
             block_out_channels=autoencoder_config['down_channels'],
             low_cpu_mem_usage=False,
@@ -119,8 +134,8 @@ def load_autoencoder(autoencoder_config, dataset_config, device):
             logging.info('Training VAE with pretrained Hugginface model SDv1.5')
             model = AutoencoderKL.from_pretrained(
             autoencoder_config['autoencoder_type'],
-            in_channels=dataset_config['im_channels'],
-            out_channels=dataset_config['im_channels'],
+            in_channels=in_channels,
+            out_channels=out_channels,
             sample_size=dataset_config['im_size_h'],
             block_out_channels=autoencoder_config['down_channels'],
             low_cpu_mem_usage=False,
