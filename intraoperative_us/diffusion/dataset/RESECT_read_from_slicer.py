@@ -255,11 +255,12 @@ def slicing_volume(volume_array, tumor_array, sulci_array, falx_array, spacing, 
             sul = Image.fromarray(sul).convert('L')
             fal = Image.fromarray(fal).convert('L')
 
-            # save the image
-            vol.save(os.path.join(subject_path, 'volume', f'{subject}_{slice_i}.png'))
-            tum.save(os.path.join(subject_path, 'tumor', f'{subject}_{slice_i}.png'))
-            sul.save(os.path.join(subject_path, 'sulci', f'{subject}_{slice_i}.png'))
-            fal.save(os.path.join(subject_path, 'falx', f'{subject}_{slice_i}.png'))
+            # save the image, only image with tumor
+            if np.sum(tum) > 0.0: 
+                vol.save(os.path.join(subject_path, 'volume', f'{subject}_{slice_i}.png'))
+                tum.save(os.path.join(subject_path, 'tumor', f'{subject}_{slice_i}.png'))
+                sul.save(os.path.join(subject_path, 'sulci', f'{subject}_{slice_i}.png'))
+                fal.save(os.path.join(subject_path, 'falx', f'{subject}_{slice_i}.png'))
 
             
         # plt.figure(figsize=(15, 15), num=f'{slice_i} slice', tight_layout=True)
