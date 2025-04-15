@@ -1,5 +1,5 @@
 """
-Train Varaiational Autoencoder for generate mask
+Train Varaiational Autoencoder for ONE-STEP generation
 """
 import argparse
 import torch
@@ -10,15 +10,19 @@ import numpy as np
 from tqdm import tqdm
 import json
 import yaml
+
 from intraoperative_us.diffusion.models.lpips import LPIPS
 from intraoperative_us.diffusion.models.discriminator import Discriminator
 from torch.utils.data.dataloader import DataLoader
-from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS_mask
+from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
+from intraoperative_us.diffusion.utils.utils import get_number_parameter, load_autoencoder
+from intraoperative_us.diffusion.models.segmentation_loss import FocalDiceLoss
+from intraoperative_us.diffusion.models.unet_cond_base import get_config_value
+
 from torch.optim import Adam
 import matplotlib.pyplot as plt
 import time
 import logging
-from intraoperative_us.diffusion.utils.utils import get_number_parameter, load_autoencoder
 from torchvision.utils import make_grid
 from torch.utils.tensorboard import SummaryWriter
 
@@ -34,7 +38,13 @@ def train(conf, save_folder, trial_name):
     # print(config)
     dataset_config = config['dataset_params']
     autoencoder_config = config['autoencoder_params']
+    diffusion_model_config = config['ldm_params']      ## here for taking the mask while loading the dataset
     train_config = config['train_params']
+    condition_config = get_config_value(diffusion_model_config, key='condition_config', default_value=None)
+    if condition_config is not None:
+        assert 'condition_types' in condition_config, \
+            "condition type missing in conditioning config"
+        condition_types = condition_config['condition_types']
 
     # Set the desired seed value #
     seed = 42
@@ -48,7 +58,7 @@ def train(conf, save_folder, trial_name):
     # Load Autoencoder model
     model = load_autoencoder(autoencoder_config, dataset_config, device)
      
-    data = IntraoperativeUS_mask(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+    data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                             dataset_path= dataset_config['dataset_path'],
                             im_channels= dataset_config['im_channels'], 
                             splitting_json=dataset_config['splitting_json'],
@@ -57,8 +67,9 @@ def train(conf, save_folder, trial_name):
                             train_percentage=dataset_config['train_percentage'],
                             val_percentage=dataset_config['val_percentage'],
                             test_percentage=dataset_config['test_percentage'],
+                            condition_config=condition_config,
                             data_augmentation=True)
-    val_data = IntraoperativeUS_mask(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+    val_data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
                                im_channels= dataset_config['im_channels'], 
                                splitting_json=dataset_config['splitting_json'],
@@ -67,6 +78,7 @@ def train(conf, save_folder, trial_name):
                                train_percentage=dataset_config['train_percentage'],
                                val_percentage=dataset_config['val_percentage'],
                                test_percentage=dataset_config['test_percentage'],
+                               condition_config=condition_config,
                                data_augmentation=False)
 
     logging.info(f'len data {len(data)} - len val_data {len(val_data)}')
@@ -102,7 +114,8 @@ def train(conf, save_folder, trial_name):
     disc_criterion = torch.nn.MSELoss()            # Disc Loss can even be BCEWithLogits MSELoss()
 
     lpips_model = LPIPS().eval().to(device)         # Perceptual loss, No need to freeze lpips as lpips.py takes care of that
-    discriminator = Discriminator(im_channels=dataset_config['im_channels']).to(device)
+    mask_criterior = FocalDiceLoss()      
+    discriminator = Discriminator(im_channels=model.config['in_channels']).to(device)
 
     optimizer_d = Adam(discriminator.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
     optimizer_g = Adam(model.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
@@ -124,6 +137,7 @@ def train(conf, save_folder, trial_name):
         recon_losses = []
         kl_losses = []
         perceptual_losses = []
+        focal_losses = []
         disc_losses = []
         gen_losses = []
         losses = []
@@ -131,7 +145,11 @@ def train(conf, save_folder, trial_name):
         optimizer_g.zero_grad()
         optimizer_d.zero_grad()
         
-        for im in tqdm(data_loader): #  avoid tqdm for cluster tqdm(data_loader):
+        for data in tqdm(data_loader): #  avoid tqdm for cluster tqdm(data_loader):
+            img = data[0]
+            mask = data[1]['image']
+            im = torch.cat((img, mask), dim=1)
+            
             step_count += 1
             im = im.float().to(device)
 
@@ -145,19 +163,30 @@ def train(conf, save_folder, trial_name):
                 mean = encoder_out.latent_dist.mean      # Mean of latent space
                 logvar = encoder_out.latent_dist.logvar  # Log-variance
                 output = model.decode(model.encode(im).latent_dist.sample()).sample
-
+            
 
             # Image Saving Logic
             if step_count % image_save_steps == 0 or step_count == 1:
                 sample_size = min(8, im.shape[0])
-                save_output = torch.clamp(output[:sample_size], 0., 1.).detach().cpu()
-                save_input = (im[:sample_size] ).detach().cpu()
+                save_output_img = torch.clamp(output[:sample_size, 0,:,:].unsqueeze(1), -1., 1.).detach().cpu()
+                save_output_img = ((save_output_img + 1) / 2)
+                save_output_mask = torch.clamp(output[:sample_size, 1,:,:].unsqueeze(1), 0., 1.).detach().cpu()
 
-                input_grid = make_grid(save_input, nrow=sample_size)
-                output_grid = make_grid(save_output, nrow=sample_size)
+                save_input_img = ((im[:sample_size,0,:,:].unsqueeze(1) +1) / 2).detach().cpu()
+                save_input_mask = (im[:sample_size,1,:,:].unsqueeze(1)).detach().cpu()
 
-                writer.add_image('Input', input_grid, global_step=step_count)
-                writer.add_image('Output', output_grid, global_step=step_count)
+
+                input_grid_img = make_grid(save_input_img, nrow=sample_size)
+                input_grid_mask = make_grid(save_input_mask, nrow=sample_size)
+                
+                output_grid_img = make_grid(save_output_img, nrow=sample_size)
+                output_grid_mask = make_grid(save_output_mask, nrow=sample_size)
+
+                writer.add_image('Input_img', input_grid_img, global_step=step_count)
+                writer.add_image('Input_mask', input_grid_mask, global_step=step_count)
+                writer.add_image('Output_img', output_grid_img, global_step=step_count)
+                writer.add_image('Output_mask', output_grid_mask, global_step=step_count)
+                
 
             recon_loss = recon_criterion(output, im)
             recon_losses.append(recon_loss.item())
@@ -174,10 +203,14 @@ def train(conf, save_folder, trial_name):
                 gen_losses.append(train_config['disc_weight'] * disc_fake_loss.item())
 
 
-            lpips_loss = torch.mean(lpips_model(output, im)) 
+            lpips_loss = torch.mean(lpips_model(output[:,0,:,:].unsqueeze(1), im[:,0,:,:].unsqueeze(1))) ## perception loss only for the img  
             perceptual_losses.append(train_config['perceptual_weight'] * lpips_loss.item())
 
+            mask_loss = mask_criterior(output[:,1,:,:].unsqueeze(1), im[:,1,:,:].unsqueeze(1))
+            focal_losses.append(train_config['focal_weight'] * mask_loss.item())
+
             g_loss += train_config['perceptual_weight'] * lpips_loss   
+            g_loss += train_config['focal_weight'] * mask_loss
             g_loss.backward()
             losses.append(g_loss.item())            
             ############################################################################
@@ -200,12 +233,16 @@ def train(conf, save_folder, trial_name):
             optimizer_g.step()
             optimizer_g.zero_grad()
 
-        # UPDATE: add the part to validate the model based on the validation set
+        ## VALIDATION
         model.eval()
         with torch.no_grad():
             val_recon_losses = []
             val_perceptual_losses = []
-            for im in val_data_loader: #tqdm(val_data_loader): delate tqdm for cluster
+            val_focal_losses = []
+            for data in val_data_loader: #tqdm(val_data_loader): delate tqdm for cluster
+                img = data[0]
+                mask = data[1]['image']
+                im = torch.cat((img, mask), dim=1)
                 im = im.float().to(device)
                 
                 if autoencoder_config['autoencoder_type'] == 'scratch':
@@ -221,8 +258,11 @@ def train(conf, save_folder, trial_name):
                 val_recon_loss = recon_criterion(output, im)
                 val_recon_losses.append(val_recon_loss.item())
 
-                val_lpips_loss = torch.mean(lpips_model(output, im)) 
+                val_lpips_loss = torch.mean(lpips_model(output[:,0,:,:].unsqueeze(1), im[:,0,:,:].unsqueeze(1))) 
                 val_perceptual_losses.append(train_config['perceptual_weight'] * val_lpips_loss.item())
+
+                val_mask_loss = mask_criterior(output[:,1,:,:].unsqueeze(1), im[:,1,:,:].unsqueeze(1))
+                val_focal_losses.append(train_config['focal_weight'] * val_mask_loss.item())
 
         # Track best performance, and save the model's state
         if np.mean(val_recon_losses) < best_vloss:
@@ -241,6 +281,7 @@ def train(conf, save_folder, trial_name):
         # Log validation losses
         writer.add_scalar('Loss/val_recon', np.mean(val_recon_losses), epoch_idx)
         writer.add_scalar('Loss/val_lpips', np.mean(val_perceptual_losses), epoch_idx)
+        writer.add_scalar('Loss/val_focal', np.mean(val_focal_losses), epoch_idx)
         
         # Print epoch
         if len(disc_losses) > 0:
@@ -269,9 +310,9 @@ def train(conf, save_folder, trial_name):
 
             val_losses_epoch['recon'].append(np.mean(val_recon_losses))
             val_losses_epoch['lpips'].append(np.mean(val_perceptual_losses))
-
-    writer.close()
   
+    writer.close()
+
     # save json file of losses
     with open(os.path.join(save_dir, 'losses.json'), 'w') as f:
         json.dump(losses_epoch, f, indent=4)
@@ -313,7 +354,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train VAE on MNIST or CelebA-HQ')
     parser.add_argument('--conf', type=str, default='conf', help='yaml configuration file')  
     parser.add_argument('--save_folder', type=str, default='trained_model', help='folder to save the model, default = trained_model')
-    parser.add_argument('--type_images', type=str, default='mask', help='type of images to train')
+    parser.add_argument('--type_images', type=str, default='one_step', help='type of images to train')
     parser.add_argument('--trial_name', type=str, default=None, help='name of the trial')
     parser.add_argument('--log', type=str, default='debug', help='Logging level')
     args = parser.parse_args()

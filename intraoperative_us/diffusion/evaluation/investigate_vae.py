@@ -152,6 +152,12 @@ def infer(par_dir, conf, trial, type_image, show_plot=False):
     dataset_config = config['dataset_params']
     autoencoder_config = config['autoencoder_params']
     initialization = autoencoder_config['initialization']
+    diffusion_model_config = config['ldm_params']      ## here for taking the mask while loading the dataset
+    condition_config = get_config_value(diffusion_model_config, key='condition_config', default_value=None)
+    if condition_config is not None:
+        assert 'condition_types' in condition_config, \
+            "condition type missing in conditioning config"
+        condition_types = condition_config['condition_types']
 
     # Create the dataset and dataloader
     if type_image == 'ius':
@@ -177,6 +183,20 @@ def infer(par_dir, conf, trial, type_image, show_plot=False):
                             val_percentage=dataset_config['val_percentage'],
                             test_percentage=dataset_config['test_percentage'],
                             data_augmentation=False)
+
+    elif type_image == 'one_step':
+        data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+                                dataset_path= dataset_config['dataset_path'],
+                                im_channels= dataset_config['im_channels'],
+                                splitting_json=dataset_config['splitting_json'], 
+                                split='train',
+                                splitting_seed=dataset_config['splitting_seed'],
+                                train_percentage=dataset_config['train_percentage'],
+                                val_percentage=dataset_config['val_percentage'],
+                                test_percentage=dataset_config['test_percentage'],
+                                condition_config=condition_config,
+                                data_augmentation=False)
+
     logging.info(f'len data {len(data)}')
     data_loader = DataLoader(data, batch_size=1, shuffle=False, num_workers=8)
 
@@ -215,7 +235,13 @@ def infer(par_dir, conf, trial, type_image, show_plot=False):
         progress_bar = tqdm(total=len(data_loader), disable=False)
         progress_bar.set_description('Loop over the dataset')
         for nn, im in enumerate(data_loader):
-            im = im.float().to(device)
+            if type_image == 'one_step':
+                img = im[0]
+                mask = im[1]['image']
+                im = torch.cat((im[0], mask), dim=1).float().to(device)
+                
+            else:
+                im = im.float().to(device)
 
             ## Encoder - get the latent space
             if initialization == 'scratch':
@@ -245,9 +271,24 @@ def infer(par_dir, conf, trial, type_image, show_plot=False):
                 plt.axis('off')
 
                 ## plot the image, latent space and the reconstructed
-                plt.figure(num='reconstructed')
-                plt.imshow(output[0,0,:,:].cpu().numpy(), cmap='gray')
-                plt.axis('off')
+                if type_image == 'one_step':
+                    plt.figure(num='reconstructed', figsize=(10, 10), tight_layout=True)
+                    plt.subplot(2, 2, 1)
+                    plt.title('Real image', fontsize=20)
+                    plt.imshow(im[0,0,:,:].cpu().numpy(), cmap='gray')
+                    plt.axis('off')
+                    plt.subplot(2, 2, 2)
+                    plt.title('Real Mask', fontsize=20)
+                    plt.imshow(im[0,1,:,:].cpu().numpy(), cmap='gray')
+                    plt.axis('off')
+                    plt.subplot(2, 2, 3)
+                    plt.title('Reconstructed image', fontsize=20)
+                    plt.imshow(output[0,0,:,:].cpu().numpy(), cmap='gray')
+                    plt.axis('off')
+                    plt.subplot(2, 2, 4)
+                    plt.title('Reconstructed Mask', fontsize=20)
+                    plt.imshow(np.clip(output[0,1,:,:].cpu().numpy(), 0.,1.), cmap='gray')
+                    plt.axis('off')
 
                 ## plot the image, latent space and the reconstructed image
                 plot_image_latent(im, encoded_output)
