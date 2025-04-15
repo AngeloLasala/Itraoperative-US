@@ -465,7 +465,7 @@ class GenerateDataset(torch.utils.data.Dataset):
 if __name__ == '__main__':
     current_directory = os.path.dirname(__file__)
     par_dir = os.path.dirname(current_directory)
-    conf = os.path.join(par_dir, 'conf', f'conf.yaml')
+    conf = os.path.join(par_dir, 'conf', f'conf_one_step.yaml')
 
     with open(conf, 'r') as file:
         try:
@@ -474,11 +474,24 @@ if __name__ == '__main__':
             print(exc)
     print(config['dataset_params'])
     dataset_config = config['dataset_params']
+    splitting = 'splitting_1.json'
 
     dataset = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
                                im_channels= dataset_config['im_channels'], 
-                               splitting_json=dataset_config['splitting_json'],
+                               splitting_json=splitting,
+                               split='train',
+                               splitting_seed=dataset_config['splitting_seed'],
+                               train_percentage=dataset_config['train_percentage'],
+                               val_percentage=dataset_config['val_percentage'],
+                               test_percentage=dataset_config['test_percentage'],
+                               condition_config=config['ldm_params']['condition_config'],
+                               data_augmentation=False)
+    
+    dataset_val = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+                               dataset_path= dataset_config['dataset_path'],
+                               im_channels= dataset_config['im_channels'], 
+                               splitting_json=splitting,
                                split='val',
                                splitting_seed=dataset_config['splitting_seed'],
                                train_percentage=dataset_config['train_percentage'],
@@ -486,10 +499,27 @@ if __name__ == '__main__':
                                test_percentage=dataset_config['test_percentage'],
                                condition_config=config['ldm_params']['condition_config'],
                                data_augmentation=False)
+    
+    dataset_test = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+                               dataset_path= dataset_config['dataset_path'],
+                               im_channels= dataset_config['im_channels'], 
+                               splitting_json=splitting,
+                               split='test',
+                               splitting_seed=dataset_config['splitting_seed'],
+                               train_percentage=dataset_config['train_percentage'],
+                               val_percentage=dataset_config['val_percentage'],
+                               test_percentage=dataset_config['test_percentage'],
+                               condition_config=config['ldm_params']['condition_config'],
+                               data_augmentation=False)
 
-    print(dataset.splitting_dict)                            
+    print()
+    print(f'Train: {len(dataset)}')
+    print(f'Val: {len(dataset_val)}')
+    print(f'Test: {len(dataset_test)}')
+    print()
+                                
     im, lab = dataset[10]
-    print(im, lab)
+    # print(im, lab)
 
     # convert in numpy and plot the image
     im = im.numpy().transpose(1,2,0)
