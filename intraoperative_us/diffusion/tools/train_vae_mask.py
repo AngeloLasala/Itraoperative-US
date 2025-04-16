@@ -228,7 +228,6 @@ def train(conf, save_folder, trial_name):
         if np.mean(val_recon_losses) < best_vloss:
             best_vloss = np.mean(val_recon_losses)
             torch.save(model.state_dict(), os.path.join(save_dir, f'vae_best_{epoch_idx+1}.pth'))
-            torch.save(discriminator.state_dict(), os.path.join(save_dir, f'discriminator_best_{epoch_idx+1}.pth'))
         time_end = time.time()
         
         # Log training losses
