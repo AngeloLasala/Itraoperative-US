@@ -230,7 +230,6 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
         generated_mask_dir = os.path.join(par_dir, trial, experiment, f'w_{guide_w}', scheduler_type, f"samples_ep_{ep}")
         data_gen = GeneratedMaskDataset(par_dir = generated_mask_dir, size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'])
         data_loader_gen = DataLoader(data_gen, batch_size=train_config['ldm_batch_size_sample'], shuffle=False, num_workers=8)
-        logging.info(f'len of the dataset: {len(data_gen)}')
 
         tumor_size_gen, cent_x_gen, centr_y_gen, mean_dist_gen, power_gen = analyze_tumor_from_dataloader(data_loader_gen, n_points, show_plot=show_gen_mask)
 
@@ -238,6 +237,8 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
         for i, j, z in zip(tumor_size_gen, mean_dist_gen, power_gen):
             if j is not None and z is not None and i is not None:
                 gen_masks.append([i, j, z])
+        gen_masks = gen_masks[:len(data_img)]
+        logging.info(f'len gen data {len(gen_masks)}')
         ep_dict['gen_mask'] = gen_masks
 
         gen_masks = np.array(gen_masks)
@@ -286,7 +287,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
     ax[0].hist(gen_masks[:,0],  bins=bins, color='lightgreen', label='Gen data', alpha=0.5)
     ax[0].set_xlabel('Tumor size', fontsize=30)
     ax[0].tick_params(axis='both', which='major', labelsize=30)
-    ax[0].legend(fontsize=30)
+    ax[0].legend(fontsize=24)
     ax[0].grid(linestyle=':')
 
     ax[1].scatter(real_masks[:,0], real_masks[:,2], c='blue', label='Train data', s=100, alpha=0.6)
@@ -298,7 +299,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
     ax[1].set_xlabel('Tumor size', fontsize=30)
     ax[1].set_ylabel('E(PSD)', fontsize=30)
     ax[1].tick_params(axis='both', which='major', labelsize=30)
-    ax[1].legend(fontsize=30)
+    ax[1].legend(fontsize=24)
     ax[1].grid(linestyle=':')
     plt.show()
 
