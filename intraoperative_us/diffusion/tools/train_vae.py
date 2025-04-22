@@ -81,14 +81,22 @@ def train(conf, save_folder):
 
 
     # generate save folder
-    save_dir = os.path.join(save_folder, 'ius')
+    save_dir = os.path.join(save_folder)
     if not os.path.exists(save_dir):
-        save_dir = os.path.join(save_dir, 'trial_1', 'vae')
-        os.makedirs(save_dir)
+        if trial_name is not None:
+            save_dir = os.path.join(save_dir, trial_name, 'vae')
+            os.makedirs(save_dir, exist_ok=True)
+        else:
+            save_dir = os.path.join(save_dir, 'trial_1', 'vae')
+            os.makedirs(save_dir)
     else:
-        current_trial = len(os.listdir(save_dir))
-        save_dir = os.path.join(save_dir, f'trial_{current_trial + 1}', 'vae')
-        os.makedirs(save_dir)
+        if trial_name is not None:
+            save_dir = os.path.join(save_dir, trial_name, 'vae')
+            os.makedirs(save_dir, exist_ok=True)
+        else:
+            current_trial = len(os.listdir(save_dir))
+            save_dir = os.path.join(save_dir, f'trial_{current_trial + 1}', 'vae')
+            os.makedirs(save_dir)
 
       
     # Create the loss and optimizer
@@ -308,6 +316,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train VAE on MNIST or CelebA-HQ')
     parser.add_argument('--conf', type=str, default='conf', help='yaml configuration file')  
     parser.add_argument('--save_folder', type=str, default='trained_model', help='folder to save the model, default = trained_model')
+    parser.add_argument('--type_images', type=str, default='ius', help='type of images to train')
+    parser.add_argument('--trial_name', type=str, default=None, help='name of the trial')
     parser.add_argument('--log', type=str, default='info', help='Logging level')
     args = parser.parse_args()
 
@@ -321,5 +331,5 @@ if __name__ == '__main__':
     par_dir = os.path.dirname(current_directory)
 
     configuration = os.path.join(par_dir, 'conf', f'{args.conf}.yaml')
-    save_folder = os.path.join(par_dir, args.save_folder)
-    train(conf = configuration, save_folder = save_folder)
+    save_folder = os.path.join(par_dir, args.save_folder, args.type_images) 
+    train(conf = configuration, save_folder = save_folder, trial_name = args.trial_name)

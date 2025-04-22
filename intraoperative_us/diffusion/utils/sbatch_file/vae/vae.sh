@@ -9,7 +9,8 @@
 #SBATCH --output=vae_fine_hug.out      # standard output file
 #SBATCH --account=IscrC_Med-LMGM     # account name
 
-python -m intraoperative_us.diffusion.tools.train_vae --conf conf_fine_tuning\
+python -m intraoperative_us.diffusion.tools.train_vae --conf conf/conf_cond_ldm_1\
                                                       --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
+                                                      --trial_name VAE_random\
                                                       --log 'info'
  
