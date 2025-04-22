@@ -7,6 +7,6 @@
 #SBATCH --partition=boost_usr_prod   # partition name
 #SBATCH --error=gpu.err       # standard error file
 #SBATCH --output=gpu.out      # standard output file
-#SBATCH --account=IscrC_Med-LMGM     # account name
+#SBATCH --account=IscrC_AIM-ORAL     # account name
 
 python check_gpu.py
