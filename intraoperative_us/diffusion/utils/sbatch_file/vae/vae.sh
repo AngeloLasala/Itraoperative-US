@@ -13,4 +13,3 @@ python -m intraoperative_us.diffusion.tools.train_vae --conf conf/conf_cond_ldm_
                                                       --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
                                                       --trial_name VAE_random\
                                                       --log 'info'
- 
