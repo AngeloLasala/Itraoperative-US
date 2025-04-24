@@ -26,7 +26,7 @@ from intraoperative_us.diffusion.utils.utils import get_number_parameter, load_a
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def train(conf, save_folder):
+def train(conf, save_folder, trial_name):
 
     with open(conf, 'r') as file:
         try:
