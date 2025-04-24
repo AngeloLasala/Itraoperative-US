@@ -6,7 +6,7 @@
 #SBATCH --time=9:50:00                 # time limits: 1 hour
 #SBATCH --partition=boost_usr_prod   # partition name
 #SBATCH --error=vae_random_1.err       # standard error file
-#SBATCH --output=vae_rabdom_1.out      # standard output file
+#SBATCH --output=vae_random_1.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
 python -m intraoperative_us.diffusion.tools.train_vae --conf cond_ldm/conf_vae_random_1\

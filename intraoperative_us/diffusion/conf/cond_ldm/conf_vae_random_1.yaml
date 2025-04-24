@@ -11,7 +11,7 @@ dataset_params:
   train_percentage: 0.8              # percentage of the dataset used for training
   val_percentage: 0.1                # percentage of the dataset used for validation
   test_percentage: 0.1               # percentage of the dataset used for testing
-  splitting_json: "splitting_0.json"   # FOR REPRODUCIBILITY: name of the json file containing the splitting
+  splitting_json: "splitting_1.json"   # FOR REPRODUCIBILITY: name of the json file containing the splitting
 
 
 autoencoder_params:
