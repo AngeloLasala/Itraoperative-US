@@ -9,7 +9,7 @@
 #SBATCH --output=vae_fine_hug.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
-python -m intraoperative_us.diffusion.tools.train_vae --conf cond_ldm/conf_vae_random_0\
+python -m intraoperative_us.diffusion.tools.train_vae --conf cond_ldm/conf_vae_random_2\
                                                       --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
-                                                      --trial_name VAE_random/split_0\
+                                                      --trial_name VAE_random/split_2\
                                                       --log 'info'
