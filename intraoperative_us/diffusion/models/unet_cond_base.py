@@ -287,11 +287,24 @@ class UNet2DConditionModelCostum(nn.Module):
                 self.mask_model = MaskConcatenationModel(in_channels=self.im_cond_input_ch, out_channels=self.im_cond_output_ch)
 
         ## UNet model for diffusion process
-        self.model = UNet2DConditionModel.from_pretrained(os.path.join(model_config['unet_path'], model_config['unet']),
+        if model_config['initialization'] == 'random':
+            print('Training UNet with random initialization')
+            self.model = UNet2DConditionModel(
+                sample_size=model_config['sample_size'],
+                in_channels=self.unet_input_ch,
+                out_channels=model_config['z_channels'],
+                block_out_channels=model_config['down_channels'],
+                cross_attention_dim=model_config['cross_attention_dim'],
+            )
+
+        elif model_config['initialization'] == 'SD1.5' or model_config['initialization'] == 'lora':
+            print('Training UNet with pretrained Hugginface model SDv1.5')
+            self.model = UNet2DConditionModel.from_pretrained(os.path.join(model_config['unet_path'], model_config['unet']),
                                                           sample_size=model_config['sample_size'],
                                                           in_channels=self.unet_input_ch,
                                                           out_channels=model_config['z_channels'],
                                                           block_out_channels=model_config['down_channels'],
+                                                          cross_attention_dim=model_config['cross_attention_dim'],
                                                           low_cpu_mem_usage=False,
                                                           use_safetensors=True,
                                                           ignore_mismatched_sizes=True)

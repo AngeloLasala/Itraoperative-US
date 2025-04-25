@@ -110,158 +110,158 @@ def train(par_dir, conf, trial, experiment_name):
     model = UNet2DConditionModelCostum(diffusion_model_config)
     model.train()
 
-    ## TEXT conditioning with CLIP text model
-    tokenizer = CLIPTokenizer.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['tokenizer']))
-    text_encoder = CLIPTextModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['text_encoder']), use_safetensors=True)
-    def tokenize_captions(current_batch_size):
-        captions = [""] * current_batch_size
-        inputs = tokenizer(
-            captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
-        )
-        return inputs.input_ids
+    # ## TEXT conditioning with CLIP text model
+    # tokenizer = CLIPTokenizer.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['tokenizer']))
+    # text_encoder = CLIPTextModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['text_encoder']), use_safetensors=True)
+    # def tokenize_captions(current_batch_size):
+    #     captions = [""] * current_batch_size
+    #     inputs = tokenizer(
+    #         captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
+    #     )
+    #     return inputs.input_ids
     
 
-    ## freeze the VAE and the text encoder for saving memory
-    vae.requires_grad_(False)
-    text_encoder.requires_grad_(False)
+    # ## freeze the VAE and the text encoder for saving memory
+    # vae.requires_grad_(False)
+    # text_encoder.requires_grad_(False)
 
-    save_folder = os.path.join(trial_folder)
-    if not os.path.exists(save_folder):
-        if experiment_name is not None:
-            save_folder = os.path.join(trial_folder, experiment_name)
-            os.makedirs(save_folder, exist_ok=True)
-        else:
-            save_folder = os.path.join(save_folder, 'cond_ldm_1')
-            os.makedirs(save_folder)
-    else:
-        if experiment_name is not None:
-            save_folder = os.path.join(trial_folder, experiment_name)
-            os.makedirs(save_folder, exist_ok=True)
-        else:
-            count = 0
-            for folder in os.listdir(trial_folder):
-                if folder.startswith('cond_ldm'):
-                    count += 1
-            save_folder = os.path.join(trial_folder, f'cond_ldm_{count+1}')
-            os.makedirs(save_folder)
+    # save_folder = os.path.join(trial_folder)
+    # if not os.path.exists(save_folder):
+    #     if experiment_name is not None:
+    #         save_folder = os.path.join(trial_folder, experiment_name)
+    #         os.makedirs(save_folder, exist_ok=True)
+    #     else:
+    #         save_folder = os.path.join(save_folder, 'cond_ldm_1')
+    #         os.makedirs(save_folder)
+    # else:
+    #     if experiment_name is not None:
+    #         save_folder = os.path.join(trial_folder, experiment_name)
+    #         os.makedirs(save_folder, exist_ok=True)
+    #     else:
+    #         count = 0
+    #         for folder in os.listdir(trial_folder):
+    #             if folder.startswith('cond_ldm'):
+    #                 count += 1
+    #         save_folder = os.path.join(trial_folder, f'cond_ldm_{count+1}')
+    #         os.makedirs(save_folder)
 
-    ## Prepare the training
-    num_epochs = train_config['ldm_epochs']
-    optimizer = torch.optim.AdamW(model.parameters(), lr=train_config['ldm_lr'])   # optimizer = Adam(model.parameters(), lr=train_config['ldm_lr'])
-    accelerator = Accelerator(
-        mixed_precision=train_config['mixed_precision'],
-        gradient_accumulation_steps=train_config['gradient_accumulation_steps'], 
-    )
-    model, optimizer, data_loader = accelerator.prepare(model, optimizer, data_loader)
-    precision_dict = {"fp16": torch.float16, "bf16": torch.bfloat16, "float32": torch.float32}
-    text_encoder.to(accelerator.device, dtype=precision_dict[train_config['mixed_precision']])
-    vae.to(accelerator.device, dtype=precision_dict[train_config['mixed_precision']])
+    # ## Prepare the training
+    # num_epochs = train_config['ldm_epochs']
+    # optimizer = torch.optim.AdamW(model.parameters(), lr=train_config['ldm_lr'])   # optimizer = Adam(model.parameters(), lr=train_config['ldm_lr'])
+    # accelerator = Accelerator(
+    #     mixed_precision=train_config['mixed_precision'],
+    #     gradient_accumulation_steps=train_config['gradient_accumulation_steps'], 
+    # )
+    # model, optimizer, data_loader = accelerator.prepare(model, optimizer, data_loader)
+    # precision_dict = {"fp16": torch.float16, "bf16": torch.bfloat16, "float32": torch.float32}
+    # text_encoder.to(accelerator.device, dtype=precision_dict[train_config['mixed_precision']])
+    # vae.to(accelerator.device, dtype=precision_dict[train_config['mixed_precision']])
     
 
-    # Run training
-    logging.info('Start training ...')
-    torch.cuda.empty_cache()
-    for epoch_idx in range(num_epochs):
-        train_loss = 0.0
-        progress_bar = tqdm(total=len(data_loader), disable=False)
-        progress_bar.set_description(f"Epoch {epoch_idx + 1}/{num_epochs}")
+    # # Run training
+    # logging.info('Start training ...')
+    # torch.cuda.empty_cache()
+    # for epoch_idx in range(num_epochs):
+    #     train_loss = 0.0
+    #     progress_bar = tqdm(total=len(data_loader), disable=False)
+    #     progress_bar.set_description(f"Epoch {epoch_idx + 1}/{num_epochs}")
 
-        time_start = time.time()
-        losses = []
-        for data in data_loader:
-            cond_input = None
-            if condition_config is not None:
-                im, cond_input = data
-            else:
-                im = data
+    #     time_start = time.time()
+    #     losses = []
+    #     for data in data_loader:
+    #         cond_input = None
+    #         if condition_config is not None:
+    #             im, cond_input = data
+    #         else:
+    #             im = data
 
-            im = im.float()
-            test_tokenized_captions = tokenize_captions(im.shape[0]).to(accelerator.device)
+    #         im = im.float()
+    #         test_tokenized_captions = tokenize_captions(im.shape[0]).to(accelerator.device)
 
 
-            #############  Handiling the condition input for cond LDM ########################################
-            if 'image' in condition_types:
-                assert 'image' in cond_input, 'Conditioning Type Image but no image conditioning input present'
-                cond_input_image = cond_input['image']
-                im_drop_prob = get_config_value(condition_config['image_condition_config'], 'cond_drop_prob', 0.)
-                cond_input['image'] = drop_image_condition(cond_input_image, im, im_drop_prob)
+    #         #############  Handiling the condition input for cond LDM ########################################
+    #         if 'image' in condition_types:
+    #             assert 'image' in cond_input, 'Conditioning Type Image but no image conditioning input present'
+    #             cond_input_image = cond_input['image']
+    #             im_drop_prob = get_config_value(condition_config['image_condition_config'], 'cond_drop_prob', 0.)
+    #             cond_input['image'] = drop_image_condition(cond_input_image, im, im_drop_prob)
             
-            with accelerator.accumulate(model):
-                # Convert images to latent space, scalinf factor is used to scale the latent space with the scaling factor of the VAE
-                latents = vae.encode(im.to(dtype=precision_dict[train_config['mixed_precision']])).latent_dist.sample()
-                latents = latents * vae.config.scaling_factor
+    #         with accelerator.accumulate(model):
+    #             # Convert images to latent space, scalinf factor is used to scale the latent space with the scaling factor of the VAE
+    #             latents = vae.encode(im.to(dtype=precision_dict[train_config['mixed_precision']])).latent_dist.sample()
+    #             latents = latents * vae.config.scaling_factor
 
-                # Sample random noise
-                # noise = torch.randn_like(im).to(device)
-                noise = torch.randn_like(latents)
-                if False:#noise_offset_is_true: ## TO BE IMPLEMENTED
-                    # https://www.crosslabs.org//blog/diffusion-with-offset-noise
-                    noise += args.noise_offset * torch.randn(
-                        (latents.shape[0], latents.shape[1], 1, 1), device=latents.device
-                    )
+    #             # Sample random noise
+    #             # noise = torch.randn_like(im).to(device)
+    #             noise = torch.randn_like(latents)
+    #             if False:#noise_offset_is_true: ## TO BE IMPLEMENTED
+    #                 # https://www.crosslabs.org//blog/diffusion-with-offset-noise
+    #                 noise += args.noise_offset * torch.randn(
+    #                     (latents.shape[0], latents.shape[1], 1, 1), device=latents.device
+    #                 )
 
-                # Sample timestep
-                # t = torch.randint(0, diffusion_config['num_timesteps'], (im.shape[0],)).to(device)
+    #             # Sample timestep
+    #             # t = torch.randint(0, diffusion_config['num_timesteps'], (im.shape[0],)).to(device)
 
-                bsz = latents.shape[0]
-                # Sample a random timestep for each image
-                timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=latents.device)
-                timesteps = timesteps.long()
+    #             bsz = latents.shape[0]
+    #             # Sample a random timestep for each image
+    #             timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=latents.device)
+    #             timesteps = timesteps.long()
 
-                # Add noise to the latents according to the noise magnitude at each timestep
-                # (this is the forward diffusion process)
-                noisy_latents = scheduler.add_noise(latents, noise, timesteps)
+    #             # Add noise to the latents according to the noise magnitude at each timestep
+    #             # (this is the forward diffusion process)
+    #             noisy_latents = scheduler.add_noise(latents, noise, timesteps)
 
-                encoder_hidden_states = text_encoder(test_tokenized_captions, return_dict=False)[0]
+    #             encoder_hidden_states = text_encoder(test_tokenized_captions, return_dict=False)[0]
 
-                ## predic the noise residual or the velocity
-                if scheduler.config.prediction_type == "epsilon":
-                    target = noise
-                elif scheduler.config.prediction_type == "v_prediction":
-                    target = scheduler.get_velocity(latents, noise, timesteps)
-                else:
-                    raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
+    #             ## predic the noise residual or the velocity
+    #             if scheduler.config.prediction_type == "epsilon":
+    #                 target = noise
+    #             elif scheduler.config.prediction_type == "v_prediction":
+    #                 target = scheduler.get_velocity(latents, noise, timesteps)
+    #             else:
+    #                 raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
 
-               # Predict the noise residual and compute loss or predict the velocity and compute loss
-                model_pred = model(noisy_latents, timesteps, encoder_hidden_states, cond_input)#return_dict=False)[0]
+    #            # Predict the noise residual and compute loss or predict the velocity and compute loss
+    #             model_pred = model(noisy_latents, timesteps, encoder_hidden_states, cond_input)#return_dict=False)[0]
 
-                ## compute loss
-                loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+    #             ## compute loss
+    #             loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
 
-                # Gather the losses across all processes for logging (if we use distributed training).
-                avg_loss = accelerator.gather(loss.repeat(train_config['ldm_batch_size'])).mean()
-                train_loss += avg_loss.item() / train_config['gradient_accumulation_steps']
+    #             # Gather the losses across all processes for logging (if we use distributed training).
+    #             avg_loss = accelerator.gather(loss.repeat(train_config['ldm_batch_size'])).mean()
+    #             train_loss += avg_loss.item() / train_config['gradient_accumulation_steps']
 
-                # Backpropagate
-                accelerator.backward(loss)
-                losses.append(loss.detach().item())
-                optimizer.step()
-                optimizer.zero_grad()
+    #             # Backpropagate
+    #             accelerator.backward(loss)
+    #             losses.append(loss.detach().item())
+    #             optimizer.step()
+    #             optimizer.zero_grad()
                 
 
-                progress_bar.update(1)
-                logs = {"loss": loss.detach().item()}
-                progress_bar.set_postfix(**logs)
+    #             progress_bar.update(1)
+    #             logs = {"loss": loss.detach().item()}
+    #             progress_bar.set_postfix(**logs)
 
-        ## Validation - computation of the FID score between real images (train) and generated images (validation)
-        # Real images: from the datasete loader of the training set
-        # Generated images: from the dataset loader of the validation set on wich i apply the diffusion and the decoder
-        time_end = time.time()
-        total_time = time_end - time_start
-        print(f'epoch:{epoch_idx+1}/{num_epochs} | Loss : {np.mean(losses):.4f} | Time: {total_time:.4f} sec')
+    #     ## Validation - computation of the FID score between real images (train) and generated images (validation)
+    #     # Real images: from the datasete loader of the training set
+    #     # Generated images: from the dataset loader of the validation set on wich i apply the diffusion and the decoder
+    #     time_end = time.time()
+    #     total_time = time_end - time_start
+    #     print(f'epoch:{epoch_idx+1}/{num_epochs} | Loss : {np.mean(losses):.4f} | Time: {total_time:.4f} sec')
 
-        # Save the model
-        if (epoch_idx+1) % train_config['save_frequency'] == 0:
-            torch.save(model.state_dict(), os.path.join(save_folder, f'ldm_{epoch_idx+1}.pth'))
-    if accelerator.is_main_process:
-        accelerate_folder = os.path.join(save_folder, f'accelerator_{epoch_idx+1}')
-        accelerator.save_state(accelerate_folder)
-    accelerator.end_training()
+    #     # Save the model
+    #     if (epoch_idx+1) % train_config['save_frequency'] == 0:
+    #         torch.save(model.state_dict(), os.path.join(save_folder, f'ldm_{epoch_idx+1}.pth'))
+    # if accelerator.is_main_process:
+    #     accelerate_folder = os.path.join(save_folder, f'accelerator_{epoch_idx+1}')
+    #     accelerator.save_state(accelerate_folder)
+    # accelerator.end_training()
 
-    logging.info('Done Training ...')
-    ## save the config file
-    with open(os.path.join(save_folder, 'config.yaml'), 'w') as f:
-        yaml.dump(config, f)
+    # logging.info('Done Training ...')
+    # ## save the config file
+    # with open(os.path.join(save_folder, 'config.yaml'), 'w') as f:
+    #     yaml.dump(config, f)
 
 
 if __name__ == '__main__':
