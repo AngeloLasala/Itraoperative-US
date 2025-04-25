@@ -141,7 +141,7 @@ def plot_difference_matrix(original, out_1, out_2, out_3, out_4):
             ax[i, j].set_title(f'{label[i]} - {label[j]}', fontsize=20)
             ax[i, j].axis('off')
 
-def infer(par_dir, conf, trial, type_image, show_plot=False):
+def infer(par_dir, conf, trial, split, type_image, show_plot=False):
     ######## Read the config file #######
     with open(conf, 'r') as file:
         try:
@@ -203,7 +203,7 @@ def infer(par_dir, conf, trial, type_image, show_plot=False):
     num_images = train_config['num_samples']
     ngrid = train_config['num_grid_rows']
 
-    trial_folder = os.path.join(par_dir, trial)
+    trial_folder = os.path.join(par_dir, trial, split)
     assert os.listdir(trial_folder), f'No trained model found in trial folder {trial_folder}'
     logging.info(os.listdir(trial_folder))
 
@@ -353,6 +353,7 @@ if __name__ == '__main__':
                                                    help='folder to save the model')
     parser.add_argument('--type_image', type=str, default='ius', help='type of image to investigate, ius or mask')
     parser.add_argument('--trial', type=str, default='trial_1', help='trial name for saving the model, it is the trial folde that contain the VAE model')
+    parser.add_argument('--split', type=str, default='split_1', help='split among the 5 fold, default=split_1')
     parser.add_argument('--show_plot', action='store_true', help="show the latent space imgs, default=False")
     parser.add_argument('--log', type=str, default='debug', help='Logging level')
     args = parser.parse_args()
@@ -361,10 +362,11 @@ if __name__ == '__main__':
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
 
-    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial)
+    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial, args.split)
     if 'vae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vae', 'config.yaml')
     if 'vqvae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vqvae', 'config.yaml')
 
 
-    infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, type_image=args.type_image, show_plot=args.show_plot)
+    infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, split=args.split,
+        type_image=args.type_image, show_plot=args.show_plot)
     plt.show()
