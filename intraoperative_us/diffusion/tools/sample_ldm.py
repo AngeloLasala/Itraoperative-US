@@ -101,11 +101,19 @@ def infer(par_dir, conf, trial, experiment, epoch, type_image):
     elif diffusion_config['scheduler'] == 'ddim':
         logging.info(f"{diffusion_config['scheduler']} scheduler")
         scheduler = DDIMScheduler.from_pretrained(os.path.join(diffusion_config['scheduler_path'], diffusion_config['scheduler']),
+                                                  beta_start=0.0001,
+                                                  beta_end=0.02,
+                                                  beta_schedule='linear',
+                                                  clip_sample=True,
                                                   prediction_type=diffusion_config['prediction_type'])
 
     elif diffusion_config['scheduler'] == 'pndm':
         logging.info(f"{diffusion_config['scheduler']} scheduler")
         scheduler = PNDMScheduler.from_pretrained(os.path.join(diffusion_config['scheduler_path'], diffusion_config['scheduler']),
+                                                  beta_start=0.0001,
+                                                  beta_end=0.02,
+                                                  beta_schedule='linear',
+                                                  clip_sample=True,
                                                   prediction_type=diffusion_config['prediction_type'])
 
     elif diffusion_config['scheduler'] == 'ddpm':

@@ -154,8 +154,8 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
         scheduler = DDIMScheduler.from_pretrained(os.path.join(diffusion_config['scheduler_path'], diffusion_config['scheduler']),
                                                   beta_start=0.0001,
                                                   beta_end=0.02,
-                                                  beta_scheduler='linear',
-                                                  clip_samples=True,
+                                                  beta_schedule='linear',
+                                                  clip_sample=True,
                                                   prediction_type=diffusion_config['prediction_type'])
 
     elif diffusion_config['scheduler'] == 'pndm':
@@ -163,8 +163,8 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
         scheduler = PNDMScheduler.from_pretrained(os.path.join(diffusion_config['scheduler_path'], diffusion_config['scheduler']),
                                                     beta_start=0.0001,
                                                     beta_end=0.02,
-                                                    beta_scheduler='linear',
-                                                    clip_samples=True,
+                                                    beta_schedule='linear',
+                                                    clip_sample=True,
                                                   prediction_type=diffusion_config['prediction_type'])
 
     elif diffusion_config['scheduler'] == 'ddpm':
