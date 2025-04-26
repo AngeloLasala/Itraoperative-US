@@ -9,15 +9,15 @@
 #SBATCH --output=sampling_1.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
-for trial in VAE_finetuning; do
+for exp in cond_ldm_finetuning cond_ldm_random; do
     for w in  3.0 5.0 7.0; do
         for epoch in 5000 6000 7000 8000 9000 ; do
                 python -m intraoperative_us.diffusion.tools.sample_cond_ldm_hugginface\
                         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
                         --generated_mask_dir "/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion/mask/split_1/uncond_ldm/w_-1.0/ddpm/samples_ep_3000"\
-                        --trial $trial\
+                        --trial VAE_finetuning\
                         --split 'split_1'\
-                        --experiment cond_ldm_random\
+                        --experiment $exp\
                         --epoch $epoch\
                         --guide_w $w\
                         --scheduler 'ddim'\
