@@ -192,7 +192,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, generated_mas
         scheduler = PNDMScheduler(beta_start=0.0001,
                                 beta_end=0.02,
                                 beta_schedule='linear',
-                                clip_sample=True,
+                                # clip_sample=True,
                                 prediction_type=diffusion_config['prediction_type'])
                                                     
 
