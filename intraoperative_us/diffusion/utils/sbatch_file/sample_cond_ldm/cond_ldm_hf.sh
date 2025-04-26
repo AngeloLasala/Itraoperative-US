@@ -21,7 +21,7 @@ for trial in VAE_finetuning; do
                         --epoch $epoch\
                         --guide_w $w\
                         --scheduler 'ddim'\
-                        --num_samples 50\
+                        --num_samples 100\
 
          done
     done
