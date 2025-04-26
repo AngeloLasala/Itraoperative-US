@@ -17,7 +17,7 @@ for trial in VAE_finetuning; do
                         --generated_mask_dir "/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion/mask/split_1/uncond_ldm/w_-1.0/ddpm/samples_ep_3000"\
                         --trial $trial\
                         --split 'split_1'\
-                        --experiment cond_ldm_finetuning\
+                        --experiment cond_ldm_random\
                         --epoch $epoch\
                         --guide_w $w\
                         --scheduler 'dpm_solver'\
