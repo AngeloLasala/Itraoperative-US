@@ -106,7 +106,7 @@ def infer(par_dir, conf, trial, experiment, epoch, type_image):
                                                   beta_schedule='linear',
                                                   clip_sample=True,
                                                   prediction_type=diffusion_config['prediction_type'])
-
+        
     elif diffusion_config['scheduler'] == 'pndm':
         logging.info(f"{diffusion_config['scheduler']} scheduler")
         scheduler = PNDMScheduler.from_pretrained(os.path.join(diffusion_config['scheduler_path'], diffusion_config['scheduler']),
@@ -122,7 +122,13 @@ def infer(par_dir, conf, trial, experiment, epoch, type_image):
 
     elif diffusion_config['scheduler'] == 'dpm_solver':
         logging.info(f"{diffusion_config['scheduler']} scheduler")
-        scheduler = DPMSolverMultistepScheduler()
+        scheduler = DPMSolverMultistepScheduler(beta_start=0.0001,
+                                                beta_end=0.02,
+                                                beta_schedule='linear',
+                                                clip_sample=True,
+                                                prediction_type=diffusion_config['prediction_type'])
+
+    logging.info(scheduler)
 
     else:
         raise ValueError(f"Scheduler {diffusion_config['scheduler']} not implemented")
