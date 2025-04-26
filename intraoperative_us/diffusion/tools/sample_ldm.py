@@ -127,11 +127,10 @@ def infer(par_dir, conf, trial, experiment, epoch, type_image):
                                                 beta_schedule='linear',
                                                 clip_sample=True,
                                                 prediction_type=diffusion_config['prediction_type'])
-
-    logging.info(scheduler)
-
     else:
         raise ValueError(f"Scheduler {diffusion_config['scheduler']} not implemented")
+
+    logging.info(scheduler)
     ####################################################
 
     # Load the trained models    
