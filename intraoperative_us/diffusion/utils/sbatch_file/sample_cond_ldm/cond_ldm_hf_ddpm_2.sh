@@ -15,7 +15,7 @@ for exp in cond_ldm_random; do
                 python -m intraoperative_us.diffusion.tools.sample_cond_ldm_hugginface\
                         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
                         --generated_mask_dir "/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion/mask/split_1/uncond_ldm/w_-1.0/ddpm/samples_ep_3000"\
-                        --trial VAE_random\
+                        --trial VAE_finetuning\
                         --split 'split_1'\
                         --experiment $exp\
                         --epoch $epoch\
