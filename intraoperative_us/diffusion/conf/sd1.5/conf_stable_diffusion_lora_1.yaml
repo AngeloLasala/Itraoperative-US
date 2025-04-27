@@ -11,7 +11,7 @@ dataset_params:
   train_percentage: 0.8              # percentage of the dataset used for training
   val_percentage: 0.1                # percentage of the dataset used for validation
   test_percentage: 0.1               # percentage of the dataset used for testing
-  splitting_json: "splitting.json"   # FOR REPRODUCIBILITY: name of the json file containing the splitting
+  splitting_json: "splitting_1.json"   # FOR REPRODUCIBILITY: name of the json file containing the splitting
 
 
 autoencoder_params:
@@ -26,7 +26,7 @@ autoencoder_params:
   initialization: 'random'
   z_channels: 4            
   codebook_size : 20
-  down_channels : [64, 128, 256, 256]      # hf original [128, 256, 512, 512] - small [64, 128, 256, 256]
+  down_channels : [128, 256, 512, 512]      # hf original [128, 256, 512, 512] - small [64, 128, 256, 256]
   mid_channels : [256, 256]
   down_sample : [True, True, True]
   attn_down : [False, False, False]
@@ -65,8 +65,8 @@ diffusion_params:
   prediction_type: 'epsilon'     # v_prediction, epsilon
   num_sample_timesteps : 1000
   num_train_timesteps : 1000
-  beta_start : 0.0015
-  beta_end : 0.0195
+  beta_start : 0.001
+  beta_end : 0.02
   lr_scheduler: "constant"             # The scheduler type to use. Choose between ["linear", "cosine", "cosine_with_restarts", "polynomial",'"constant", "constant_with_warmup"
   lr_warmup_steps: 500                # Number of steps for the warmup in the lr scheduler
 

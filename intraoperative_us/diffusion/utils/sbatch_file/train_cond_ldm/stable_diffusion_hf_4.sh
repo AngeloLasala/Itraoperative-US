@@ -9,9 +9,9 @@
 #SBATCH --output=finetuning_2.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
-python -m intraoperative_us.diffusion.tools.train_stable_diffusion --conf conf_stable_diffusion_2\
+python -m intraoperative_us.diffusion.tools.train_stable_diffusion --conf sd1.5/conf_stable_diffusion_2\
           --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
-          --trial trial_SD_finetuning\
+          --trial VAE_finetuning\
           --type_image ius\
-          --experiment SD_sd1.5_empty_text\
+          --experiment SD_finetuning_empty_text\
           --log warning\

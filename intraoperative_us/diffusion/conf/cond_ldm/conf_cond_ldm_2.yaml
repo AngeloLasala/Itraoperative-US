@@ -65,8 +65,8 @@ diffusion_params:
   prediction_type: 'epsilon'     # v_prediction, epsilon
   num_sample_timesteps : 1000
   num_train_timesteps : 1000
-  beta_start : 0.0015
-  beta_end : 0.0195
+  beta_start : 0.001
+  beta_end : 0.02
   lr_scheduler: "costant"             # The scheduler type to use. Choose between ["linear", "cosine", "cosine_with_restarts", "polynomial",'"constant", "constant_with_warmup"
   lr_warmup_steps: 500                # Number of steps for the warmup in the lr scheduler
 
