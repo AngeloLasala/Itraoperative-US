@@ -10,7 +10,7 @@ import yaml
 import os
 import logging
 
-from diffusers import DDIMScheduler, PNDMScheduler, UniPCMultistepScheduler, DDPMScheduler
+from diffusers import DDIMScheduler, PNDMScheduler, UniPCMultistepScheduler, DDPMScheduler, DPMSolverMultistepScheduler
 from transformers import CLIPTextModel, CLIPTokenizer, CLIPVisionConfig, CLIPVisionModel, CLIPImageProcessor
 from diffusers import UNet2DConditionModel
 from accelerate import Accelerator
@@ -38,7 +38,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir, tokenizer, text_encoder, image_processor, clip_vision_model,
            autoencoder_model_config, diffusion_config, dataset_config, type_model, vae, save_folder, mask_folder, ius_folder,
-           guide_w, activate_cond_ldm):
+           guide_w):
     """
     Sample stepwise by going backward one timestep at a time.
     We save the x0 predictions
@@ -145,7 +145,8 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
             if 'image' in condition_types:
                 cv2.imwrite(os.path.join(mask_folder, f'mask_{btc * train_config["ldm_batch_size_sample"] + i}.png'), mask[i].numpy()[0]*255)
 
-def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, generated_mask_dir):
+def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, generated_mask_dir,
+          scheduler, num_sample_timesteps):
     # Read the config file #
     with open(conf, 'r') as file:
         try:
@@ -199,8 +200,15 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
         logging.info(f"{diffusion_config['scheduler']} scheduler")
         scheduler = DDPMScheduler(num_train_timesteps=diffusion_config['num_train_timesteps'])
 
+    elif diffusion_config['scheduler'] == 'dpm_solver':
+        logging.info(f"{diffusion_config['scheduler']} scheduler")
+        scheduler = DPMSolverMultistepScheduler(beta_start=0.0001,
+                                                beta_end=0.02,
+                                                beta_schedule='linear',
+                                                prediction_type=diffusion_config['prediction_type'])
     else:
         raise ValueError(f"Scheduler {diffusion_config['scheduler']} not implemented")
+    logging.info(scheduler)
     ####################################################
 
     ############# Load tokenizer and text model #################
@@ -212,10 +220,10 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
     ###############################################
     
     ########## Load AUTOENCODER #############
-    trial_folder = os.path.join(par_dir, 'ius', trial)
+    trial_folder = os.path.join(par_dir, 'ius', trial, split)
     assert os.listdir(trial_folder), f'No trained model found in trial folder {trial_folder}'
     logging.info(os.listdir(trial_folder))
-    model_dir = os.path.join(par_dir, 'ius', trial, experiment)
+    model_dir = os.path.join(par_dir, 'ius', trial, split, experiment)
 
    
     if 'vae' in os.listdir(trial_folder):
@@ -275,22 +283,21 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, activate_cond_ldm, g
     with torch.no_grad():
         sample(model, scheduler, train_config, diffusion_model_config, condition_config, generated_mask_dir, tokenizer, text_encoder, image_processor, clip_vision_model,
                autoencoder_config, diffusion_config, dataset_config, type_model, vae, save_folder, mask_folder, ius_folder,
-               guide_w, activate_cond_ldm)
+               guide_w)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train unconditional LDM with VQVAE')
     parser.add_argument('--save_folder', type=str, default='trained_model', help='folder to save the model, default = trained_model')
     parser.add_argument('--trial', type=str, default='trial_1', help='trial name for saving the model, it is the trial folde that contain the VAE model')
+    parser.add_argument('--split', type=str, default='split_1', help='splitting name for saving the model, it is the trial folde that contain the VAE model')
     parser.add_argument('--experiment', type=str, default='cond_ldm', help="""name of expermient, it is refed to the type of condition and in general to the 
                                                                               hyperparameters (file .yaml) that is used for the training, it can be cond_ldm, cond_ldm_2, """)
     parser.add_argument('--epoch', type=int, default=100, help='epoch to sample, this is the epoch of cond ldm model')
     parser.add_argument('--guide_w', type=float, default=0.0, help='guide_w for the conditional model, w=-1 [unconditional], w=0 [vanilla conditioning], w>0 [guided conditional]')
     parser.add_argument('--generated_mask_dir', type=str, default='generated_mask', help='folder to save the generated mask')
-    parser.add_argument('--cond_ldm', action='store_true', help="""Choose whether or not activate the conditional ldm. Id activate enable the combo condVAE + condLDM
-                                                                     Default=False that means
-                                                                     'cond_vae' -> cond VAE + unconditional LDM
-                                                                     'vae' -> VAE + conditional LDM""")
+    parser.add_argument('--scheduler', type=str, default='ddpm', help='scheduler to use for the diffusion process, default is DDPM')
+    parser.add_argument('--num_sample_timesteps', type=int, default=1000, help='number of samples to generate, default is 1000')
     parser.add_argument('--log', type=str, default='info', help='Logging level')
     args = parser.parse_args()
 
@@ -300,12 +307,13 @@ if __name__ == '__main__':
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
 
-    experiment_dir = os.path.join(args.save_folder, 'ius', args.trial, args.experiment)
+    experiment_dir = os.path.join(args.save_folder, 'ius', args.trial, args.split, args.experiment)
     config = os.path.join(experiment_dir, 'config.yaml')
 
-    infer(par_dir = args.save_folder, conf=config, trial=args.trial, 
+    infer(par_dir = args.save_folder, conf=config, trial=args.trial, split = args.split,
          experiment=args.experiment ,epoch=args.epoch, guide_w=args.guide_w, 
          generated_mask_dir=args.generated_mask_dir,
-         activate_cond_ldm=args.cond_ldm)
+         scheduler=args.scheduler, num_sample_timesteps=args.num_sample_timesteps)   
+         
     plt.show()
 

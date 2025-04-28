@@ -195,7 +195,6 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, generated_mas
                                 # clip_sample=True,
                                 prediction_type=diffusion_config['prediction_type'])
                                                     
-
     elif diffusion_config['scheduler'] == 'ddpm':
         logging.info(f"{diffusion_config['scheduler']} scheduler")
         scheduler = DDPMScheduler(num_train_timesteps=diffusion_config['num_train_timesteps'])
