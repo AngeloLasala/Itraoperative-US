@@ -356,7 +356,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_folder', type=str, default='trained_model', help='folder to save the model, default = trained_model')
     parser.add_argument('--type_images', type=str, default='one_step', help='type of images to train')
     parser.add_argument('--trial_name', type=str, default=None, help='name of the trial')
-    parser.add_argument('--log', type=str, default='debug', help='Logging level')
+    parser.add_argument('--log', type=str, default='info', help='Logging level')
     args = parser.parse_args()
 
     ## set the logger

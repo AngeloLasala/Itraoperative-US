@@ -103,7 +103,7 @@ ldm_params:
       image_condition_w : 256
       cond_drop_prob: 0.1                   ## dropout probability - CFG > 0.0, (original) ControlNET = 0.0
     controlnet_condition_config:
-      pretrained_model_experiment: 'SD_sd1.5_empty_text' ## here do not use the cond_image but onlt the pretrained model with text cond
+      pretrained_model_experiment: 'SD_finetuning_empty_text' ## here do not use the cond_image but onlt the pretrained model with text cond
       pretrained_model_epoch: 3000
   tokenizer: 'tokenizer/CLIPTokenizer'                              ## tokenizer for the text conditioning
   text_encoder: 'text_encoder/CLIPTextModel'                        ## text encoder for the text conditioning

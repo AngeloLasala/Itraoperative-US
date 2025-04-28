@@ -42,7 +42,7 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 
-def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_mask):
+def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler, show_gen_mask):
     ######## Read the config file #######
     with open(conf, 'r') as file:
         try:
@@ -77,12 +77,12 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
     data_loader = DataLoader(data_img, batch_size=1, shuffle=False, num_workers=8)
 
 
-    data_gen = GenerateDataset(par_dir, trial, experiment, guide_w, scheduler, epoch, size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'])
+    data_gen = GenerateDataset(par_dir, trial, split, experiment, guide_w, scheduler, epoch, size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'])
     data_loader_gen = DataLoader(data_gen, batch_size=1, shuffle=False, num_workers=8)
     logging.info(f'len gen data {len(data_gen)}')
 
     if show_gen_mask:
-        data_gen_mask = GenerateDataset(par_dir, trial, experiment, guide_w, scheduler, epoch, 
+        data_gen_mask = GenerateDataset(par_dir, trial, split, experiment, guide_w, scheduler, epoch, 
                                         size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'],
                                         mask=True)
         for i, (gen_img, mask) in enumerate(data_gen_mask):
@@ -106,7 +106,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
             plt.show() 
 
 
-    trial_folder = os.path.join(par_dir, trial)
+    trial_folder = os.path.join(par_dir, trial, split)
     assert os.listdir(trial_folder), f'No trained model found in trial folder {trial_folder}'
 
     if 'vae' in os.listdir(trial_folder):
@@ -232,6 +232,7 @@ if __name__ == '__main__':
                                                    help='folder to save the model')
     parser.add_argument('--type_image', type=str, default='ius', help='type of image to evaluate, ius or mask')
     parser.add_argument('--trial', type=str, default='trial_1', help='trial name for saving the model, it is the trial folde that contain the VAE model')
+    parser.add_argument('--split', type=str, default='split_1', help='split among the 5 fold, default=split_1')
     parser.add_argument('--experiment', type=str, default='cond_ldm', help="""name of expermient, it is refed to the type of condition and in general to the 
                                                                               hyperparameters (file .yaml) that is used for the training, it can be cond_ldm, cond_ldm_2, """)
     parser.add_argument('--guide_w', type=float, default=0.0, help='guide_w for the conditional model, w=-1 [unconditional], w=0 [vanilla conditioning], w>0 [guided conditional]')
@@ -245,9 +246,9 @@ if __name__ == '__main__':
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
 
-    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial)
+    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial, args.split)
     if 'vae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vae', 'config.yaml')
 
-    infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, 
+    infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, split=args.split,
          experiment=args.experiment, epoch=args.epoch, guide_w=args.guide_w, scheduler=args.scheduler, show_gen_mask=args.show_gen_mask)
     plt.show()
