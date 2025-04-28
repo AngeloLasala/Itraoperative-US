@@ -174,6 +174,10 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, generated_mas
     #############################
     
     ########## Create the noise scheduler #############
+
+    diffusion_config['scheduler'] = scheduler
+    diffusion_config['num_sample_timesteps'] = num_sample_timesteps
+    
     if diffusion_config['scheduler'] == 'linear':
         logging.info('Linear scheduler')
         scheduler = LinearNoiseScheduler(num_timesteps=diffusion_config['num_timesteps'],
