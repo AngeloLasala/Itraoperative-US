@@ -9,9 +9,9 @@
 #SBATCH --output=controlnet_1.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
-python -m intraoperative_us.diffusion.tools.train_controlnet --conf conf_controlnet_1\
+python -m intraoperative_us.diffusion.tools.train_controlnet --conf controlnet/conf_controlnet_1\
           --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
-          --trial trial_SD_random\
+          --trial VAE_finetuning\
           --type_image ius\
           --experiment Controlnet_lora_empty_text\
           --log info\

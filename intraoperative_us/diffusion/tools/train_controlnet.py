@@ -87,7 +87,7 @@ def train(par_dir, conf, trial, experiment_name):
     scheduler = DDPMScheduler(num_train_timesteps=diffusion_config['num_train_timesteps'])
     logging.info(f'Scheduler configuration: {scheduler.config}')
 
-    trial_folder = trial
+    trial_folder = os.path.join(trial, f"split_{dataset_config['splitting_json'].split('.')[0].split('_')[-1]}")
     assert os.listdir(trial_folder), f'No trained model found in trial folder {trial_folder}'
 
     ## VAE Model
