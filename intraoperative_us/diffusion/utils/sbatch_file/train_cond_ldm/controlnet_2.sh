@@ -13,5 +13,5 @@ python -m intraoperative_us.diffusion.tools.train_controlnet --conf controlnet/c
           --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
           --trial VAE_finetuning\
           --type_image ius\
-          --experiment Controlnet_sd1.5_empty_text\
+          --experiment Controlnet_finetuning_empty_text\
           --log info\
