@@ -9,7 +9,7 @@
 #SBATCH --output=vae_one_step.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
-for split in 0 1 ; do
+for split in 1 0 ; do
     python -m intraoperative_us.diffusion.tools.train_vae_one_step --conf one_step/conf_one_step_$split\
                                                         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
                                                         --trial trial_1/split_$split\
