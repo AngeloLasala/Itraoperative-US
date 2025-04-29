@@ -53,16 +53,6 @@ def show_box(box, ax):
     w, h = box[2] - box[0], box[3] - box[1]
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='blue', facecolor=(0,0,0,0), lw=2))
 
-# def get_bbox_from_mask(mask):
-#     """
-#     Get the bounding box [x0, y0, h, w] from the binary mask
-#     """
-#     y, x = np.where(mask > 0)
-#     ##
-#     y0, x0 = np.min(y), np.min(x)
-#     y1, x1 = np.max(y), np.max(x)
-#     return np.array([x0, y0, x1, y1])
-
 def get_bbox_from_mask(mask):
     mask_u8 = (mask > 0).astype(np.uint8)
     contours, _ = cv2.findContours(mask_u8, cv2.RETR_EXTERNAL,
