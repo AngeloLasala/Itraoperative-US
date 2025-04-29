@@ -75,7 +75,6 @@ if __name__ == "__main__":
     parser.add_argument('--experiment', type=str, default='cond_ldm', help="""name of expermient, it is refed to the type of condition and in general to the 
                                                                               hyperparameters (file .yaml) that is used for the training, it can be cond_ldm, cond_ldm_2, """)
     parser.add_argument('--guide_w', type=float, default=0.0, help='guide_w for the conditional model, w=-1 [unconditional], w=0 [vanilla conditioning], w>0 [guided conditional]')
-    parser.add_argument('--scheduler', type=str, default='ddpm', help='sheduler used for sampling, i.e. ddpm, pndm')
     parser.add_argument('--show_plot', action='store_true', help="show and save the FID plot, default=False")
     parser.add_argument('--log', type=str, default='info', help='Logging level')
     args = parser.parse_args()
@@ -89,7 +88,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging_dict[args.log])
 
     experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial, args.experiment)
-    experiment_dir_w = os.path.join(experiment_dir, f'w_{args.guide_w}', args.scheduler)
+    experiment_dir_w = os.path.join(experiment_dir, f'w_{args.guide_w}')
 
     fid = fid_experiment(args.dataset_path, args.splitting_json, experiment_dir_w, device=device)
     for key, value in fid.items():

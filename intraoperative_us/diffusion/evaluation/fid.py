@@ -244,66 +244,6 @@ def calculate_fid_given_paths(paths, batch_size, device, dims, num_workers=1):
     return fid_value
 
 
-def fid_epoch(conf, experiment_dir, epoch, batch_size=50, device=None, dims=2048, num_workers=4):
-    """
-    FID score of cond LDM model for selected epoch.
-    
-    Parameters
-    ----------
-    conf: str
-        path to the configuration file
-
-    experiment_dir: str
-        path to the experiment directory
-
-    epoch: int
-        epoch of the model
-
-    batch_size: int
-        batch size for the dataloader
-    
-    device: str
-        device to run calculations
-
-    dims: int
-        dimensionality of features returned by Inception
-
-    num_workers: int
-        number of parallel dataloader workers
-
-    Returns
-    -------
-    fid_value: float
-        FID score
-
-    """
-    with open(conf, 'r') as file:
-        try:
-            config = yaml.safe_load(file)
-        except yaml.YAMLError as exc:
-            print(exc)
-
-    dataset_config = config['dataset_params']
-    
-    # Real train images
-    # current_dir = os.getcwd()
-    # while current_dir.split('/')[-1] != 'echocardiography':
-    #     current_dir = os.path.dirname(current_dir)
-    # data_dir_regre = os.path.join(current_dir, 'regression')
-    # data_real = os.path.join(data_dir_regre, 'DATA', dataset_config['dataset_batch'], dataset_config['split'], dataset_config['phase'], 'image')
-    # data_real = []
-    for batch in dataset_config['dataset_batch']:
-        data_real = os.path.join(dataset_config['parent_dir'], dataset_config['im_path'], batch,
-                             dataset_config['split'], dataset_config['phase'], 'image')
-        # data_real += data_batch
-
-    # Fake images validation
-    data_fake = os.path.join(experiment_dir, f'samples_ep_{epoch}')
-
-    fid_value = calculate_fid_given_paths([data_real, data_fake], batch_size, device, dims, num_workers)
-
-    return fid_value
-
 def fid_experiment(conf, experiment_dir, batch_size=50, device=None, dims=2048, num_workers=4):
     """
     FID score of cond LDM model for all epochs.
@@ -335,12 +275,11 @@ def fid_experiment(conf, experiment_dir, batch_size=50, device=None, dims=2048, 
     dataset_config = config['dataset_params']
     dataset_path = dataset_config['dataset_path']
     splitting_json = dataset_config['splitting_json']
-    split = 'train'
     
     data_real = []
     with open(os.path.join(os.path.dirname(dataset_path), splitting_json), 'r') as file:
         splitting_dict = json.load(file)
-    subjects_files = splitting_dict[split]
+    subjects_files = splitting_dict['train']
     data_real = [os.path.join(dataset_path, subject, 'volume') for subject in subjects_files]
        
     # Fake images validation
@@ -359,6 +298,7 @@ if __name__ == "__main__":
     parser.add_argument('--save_folder', type=str, default="/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/trained_model",
                                                    help='folder to save the model')
     parser.add_argument('--type_image', type=str, default='ius', help='type of image to evaluate, ius or mask')
+    parser.add_argument('--split', type=str, default='split_1', help='splitting name for saving the model, it is the trial folde that contain the VAE model')
     parser.add_argument('--trial', type=str, default='trial_1', help='trial name for saving the model, it is the trial folde that contain the VAE model')
     parser.add_argument('--experiment', type=str, default='cond_ldm', help="""name of expermient, it is refed to the type of condition and in general to the 
                                                                               hyperparameters (file .yaml) that is used for the training, it can be cond_ldm, cond_ldm_2, """)
@@ -376,7 +316,7 @@ if __name__ == "__main__":
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
 
-    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial, args.experiment)
+    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial, args.split, args.experiment)
     config = os.path.join(experiment_dir, 'config.yaml')
     experiment_dir_w = os.path.join(experiment_dir, f'w_{args.guide_w}', args.scheduler)
     
@@ -385,12 +325,12 @@ if __name__ == "__main__":
         print(f'Epoch: {key}, FID: {value}')    
     
     ## save the FID score
-    with open(os.path.join(experiment_dir, f'w_{args.guide_w}', 'FID_score.txt'), 'w') as f:
+    with open(os.path.join(experiment_dir, f'w_{args.guide_w}', f'FID_score_{args.scheduler}.txt'), 'w') as f:
         for key, value in fid.items():
             f.write(f'Epoch: {key}, FID: {value}\n')
         
     if args.show_plot:
-        fig,ax = plt.subplots(nrows=1, ncols=1, figsize=(8,5), num=f'FID score', tight_layout=True)
+        fig,ax = plt.subplots(nrows=1, ncols=1, figsize=(8,5), num=f'FID score {args.scheduler}', tight_layout=True)
         ax.plot(list(fid.keys()), list(fid.values()), marker='o', color='b')
         ax.set_xlabel('Epoch', fontsize=20)
         ax.set_ylabel(f'FID', fontsize=20)

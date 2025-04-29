@@ -21,6 +21,7 @@ import surface_distance
 from surface_distance import metrics
 import pandas as pd
 import seaborn as sns
+import cv2
 
 from intraoperative_us.diffusion.evaluation.investigate_vae import get_config_value, get_best_model
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS, GenerateDataset
@@ -52,15 +53,25 @@ def show_box(box, ax):
     w, h = box[2] - box[0], box[3] - box[1]
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='blue', facecolor=(0,0,0,0), lw=2))
 
+# def get_bbox_from_mask(mask):
+#     """
+#     Get the bounding box [x0, y0, h, w] from the binary mask
+#     """
+#     y, x = np.where(mask > 0)
+#     ##
+#     y0, x0 = np.min(y), np.min(x)
+#     y1, x1 = np.max(y), np.max(x)
+#     return np.array([x0, y0, x1, y1])
+
 def get_bbox_from_mask(mask):
-    """
-    Get the bounding box [x0, y0, h, w] from the binary mask
-    """
-    y, x = np.where(mask > 0)
-    ##
-    y0, x0 = np.min(y), np.min(x)
-    y1, x1 = np.max(y), np.max(x)
-    return np.array([x0, y0, x1, y1])
+    mask_u8 = (mask > 0).astype(np.uint8)
+    contours, _ = cv2.findContours(mask_u8, cv2.RETR_EXTERNAL,
+                                     cv2.CHAIN_APPROX_SIMPLE)
+    boxes = []
+    for cnt in contours:
+        x, y, w, h = cv2.boundingRect(cnt)
+        boxes.append([x, y, x+w, y+h])
+    return np.array(boxes, dtype=int)
 
 @torch.no_grad()
 def medsam_inference(medsam_model, img_embed, box_1024, H, W):
@@ -111,7 +122,7 @@ def compute_metrics(mask_gt, mask_pred):
                                                 95)
     return dsc, hausdorff
 
-def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, 
+def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler, 
           medsam_path,
           show_gen_mask, device, save_metrics=True):
     ######## Read the config file #######
@@ -146,7 +157,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler,
     data_loader = DataLoader(data_img, batch_size=1, shuffle=False, num_workers=8)
 
 
-    data_gen = GenerateDataset(par_dir, trial, experiment, guide_w, scheduler, epoch,
+    data_gen = GenerateDataset(par_dir, trial, split, experiment, guide_w, scheduler, epoch,
                                size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'],
                                mask=True)
     data_loader_gen = DataLoader(data_gen, batch_size=1, shuffle=False, num_workers=8)
@@ -174,27 +185,31 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler,
                 with torch.no_grad():
                     image_embedding = medsam_model.image_encoder(img_tensor)
 
-                
-                medsam_seg = medsam_inference(medsam_model, image_embedding, box_1024, H, W)
+
+                medsam_seg = np.zeros((256, 256), dtype=np.uint8)
+                for bb in box_1024[0]:
+                    box = np.array(bb)[None, :]
+                    medsam_seg_i = medsam_inference(medsam_model, image_embedding, box, H, W)
+                    medsam_seg += medsam_seg_i
+                medsam_seg = (medsam_seg > 0).astype(np.uint8)
 
                 dsc, hausdorff = compute_metrics(mask[0, 0].detach().cpu().numpy(),
-                                                    medsam_seg)
+                                                    medsam_seg)     
                 real_dsc.append(dsc)
                 real_hausdorff.append(hausdorff)
-            
             else:
                 print(f'Mask {i} is empty')
 
             if show_gen_mask:
                 fig, ax = plt.subplots(1, 2, figsize=(10, 5))
                 ax[0].imshow(img, cmap='gray')
-                show_box(bbox[0], ax[0])
+                # show_box(bbox[0], ax[0])
                 ax[0].set_title("Input Image and Bounding Box")
                 ax[0].axis('off')
                 ax[1].imshow(img, cmap='gray')
                 show_mask(medsam_seg, ax[1], color=[65/255, 105/255, 225/255, 0.8])
                 show_mask(mask[0, 0].cpu().numpy(), ax[1], color=[60/255, 179/255, 113/255, 0.4])
-                show_box(bbox[0], ax[1])
+                # show_box(bbox[0], ax[1])
                 ax[1].axis('off')
                 ax[1].set_title("MedSAM vs Manual Segmentation")
                 plt.show()
@@ -218,9 +233,12 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler,
                 with torch.no_grad():
                     image_embedding = medsam_model.image_encoder(img_tensor)
 
+                medsam_seg = np.zeros((256, 256), dtype=np.uint8)
+                for bb in box_1024[0]:
+                    box = np.array(bb)[None, :]
+                    medsam_seg_i = medsam_inference(medsam_model, image_embedding, box, H, W)
+                    medsam_seg += medsam_seg_i
                 
-                medsam_seg = medsam_inference(medsam_model, image_embedding, box_1024, H, W)
-
                 dsc, hausdorff = compute_metrics(mask[0, 0].detach().cpu().numpy(),
                                                     medsam_seg)
                 gen_dsc.append(dsc)
@@ -231,13 +249,13 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler,
             if show_gen_mask:
                 fig, ax = plt.subplots(1, 2, figsize=(10, 5))
                 ax[0].imshow(img, cmap='gray')
-                show_box(bbox[0], ax[0])
+                # show_box(bbox[0], ax[0])
                 ax[0].set_title("Input Image and Bounding Box")
                 ax[0].axis('off')
                 ax[1].imshow(img, cmap='gray')
                 show_mask(medsam_seg, ax[1], color=[65/255, 105/255, 225/255, 0.8])
                 show_mask(mask[0, 0].cpu().numpy(), ax[1], color=[60/255, 179/255, 113/255, 0.4])
-                show_box(bbox[0], ax[1])
+                # show_box(bbox[0], ax[1])
                 ax[1].axis('off')
                 ax[1].set_title("MedSAM vs Manual Segmentation")
                 plt.show()
@@ -255,20 +273,24 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler,
         np.save(os.path.join(save_folder, 'real_hausdorff.npy'), real_hausdorff)
         np.save(os.path.join(save_folder, 'gen_dsc.npy'), gen_dsc)
         np.save(os.path.join(save_folder, 'gen_hausdorff.npy'), gen_hausdorff)
-        
+
     else:
         ## Load the metrics
         save_folder = os.path.join('metrics', f'{trial}_{experiment}')
-        dsc_real = np.load(os.path.join(save_folder, f'real_dsc.npy')).tolist()
-        haus_real = np.load(os.path.join(save_folder, f'real_hausdorff.npy')).tolist()
-        dsc_generated = np.load(os.path.join(save_folder, f'gen_dsc.npy')).tolist()
-        haus_generated = np.load(os.path.join(save_folder, f'gen_hausdorff.npy')).tolist()
 
-        print(f"Real DSC: {np.mean(dsc_real):.4f} [{np.quantile(dsc_real, 0.25):.4f}, {np.quantile(dsc_real, 0.75):.4f}]")
-        print(f"Generated DSC: {np.mean(dsc_generated):.4f} [{np.quantile(dsc_generated, 0.25):.4f}, {np.quantile(dsc_generated, 0.75):.4f}]")
-        print()
-        print(f"Real Hausdorff: {np.mean(haus_real):.4f} [{np.quantile(haus_real, 0.25):.4f}, {np.quantile(haus_real, 0.75):.4f}]")
-        print(f"Generated Hausdorff: {np.mean(haus_generated):.4f} [{np.quantile(haus_generated, 0.25):.4f}, {np.quantile(haus_generated, 0.75):.4f}]")
+
+    dsc_real = np.load(os.path.join(save_folder, f'real_dsc.npy')).tolist()
+    haus_real = np.load(os.path.join(save_folder, f'real_hausdorff.npy')).tolist()
+    dsc_generated = np.load(os.path.join(save_folder, f'gen_dsc.npy')).tolist()
+    haus_generated = np.load(os.path.join(save_folder, f'gen_hausdorff.npy')).tolist()
+
+    print(dsc_real)
+
+    print(f"Real DSC: {np.mean(dsc_real):.4f} [{np.quantile(dsc_real, 0.25):.4f}, {np.quantile(dsc_real, 0.75):.4f}]")
+    print(f"Generated DSC: {np.mean(dsc_generated):.4f} [{np.quantile(dsc_generated, 0.25):.4f}, {np.quantile(dsc_generated, 0.75):.4f}]")
+    print()
+    print(f"Real Hausdorff: {np.mean(haus_real):.4f} [{np.quantile(haus_real, 0.25):.4f}, {np.quantile(haus_real, 0.75):.4f}]")
+    print(f"Generated Hausdorff: {np.mean(haus_generated):.4f} [{np.quantile(haus_generated, 0.25):.4f}, {np.quantile(haus_generated, 0.75):.4f}]")
 
 
     df = pd.DataFrame({
@@ -314,6 +336,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_folder', type=str, default="/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/trained_model",
                                                    help='folder to save the model')
     parser.add_argument('--type_image', type=str, default='ius', help='type of image to evaluate, ius or mask')
+    parser.add_argument('--split', type=str, default='split_1', help='splitting name for saving the model, it is the trial folde that contain the VAE model')
     parser.add_argument('--trial', type=str, default='trial_1', help='trial name for saving the model, it is the trial folde that contain the VAE model')
     parser.add_argument('--experiment', type=str, default='cond_ldm', help="""name of expermient, it is refed to the type of condition and in general to the 
                                                                               hyperparameters (file .yaml) that is used for the training, it can be cond_ldm, cond_ldm_2, """)
@@ -334,10 +357,10 @@ if __name__ == '__main__':
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
 
-    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial)
+    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial, args.split)
     if 'vae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vae', 'config.yaml')
 
-    infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, 
+    infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, split= args.split,
          experiment=args.experiment, epoch=args.epoch, guide_w=args.guide_w, scheduler=args.scheduler,
          medsam_path=args.medsam_path, show_gen_mask=args.show_gen_mask, device=device, save_metrics=args.save_metrics)
     plt.show()

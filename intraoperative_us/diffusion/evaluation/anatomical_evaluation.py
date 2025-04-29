@@ -78,7 +78,7 @@ def tumor_not_tumor_tissue(ius, mask, show_plot=False):
 
     
 
-def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_mask):
+def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler, show_gen_mask):
     ######## Read the config file #######
     with open(conf, 'r') as file:
         try:
@@ -113,7 +113,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler, show_gen_
     data_loader = DataLoader(data_img, batch_size=1, shuffle=False, num_workers=8)
 
 
-    data_gen = GenerateDataset(par_dir, trial, experiment, guide_w, scheduler, epoch,
+    data_gen = GenerateDataset(par_dir, trial, split, experiment, guide_w, scheduler, epoch,
                                size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'],
                                mask=True)
     data_loader_gen = DataLoader(data_gen, batch_size=1, shuffle=False, num_workers=8)
@@ -201,6 +201,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_folder', type=str, default="/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/trained_model",
                                                    help='folder to save the model')
     parser.add_argument('--type_image', type=str, default='ius', help='type of image to evaluate, ius or mask')
+    parser.add_argument('--split', type=str, default='split_1', help='splitting name for saving the model, it is the trial folde that contain the VAE model')
     parser.add_argument('--trial', type=str, default='trial_1', help='trial name for saving the model, it is the trial folde that contain the VAE model')
     parser.add_argument('--experiment', type=str, default='cond_ldm', help="""name of expermient, it is refed to the type of condition and in general to the 
                                                                               hyperparameters (file .yaml) that is used for the training, it can be cond_ldm, cond_ldm_2, """)
@@ -215,9 +216,9 @@ if __name__ == '__main__':
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
 
-    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial)
+    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial, args.split)
     if 'vae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vae', 'config.yaml')
 
-    infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, 
+    infer(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, split = args.split,
          experiment=args.experiment, epoch=args.epoch, guide_w=args.guide_w, scheduler=args.scheduler, show_gen_mask=args.show_gen_mask)
     plt.show()
