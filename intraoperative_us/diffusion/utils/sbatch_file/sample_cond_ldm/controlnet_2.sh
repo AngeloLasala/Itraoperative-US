@@ -20,8 +20,8 @@ for trial in VAE_finetuning VAE_random; do
                         --experiment Controlnet_finetuning_empty_text\
                         --epoch $epoch\
                         --guide_w $w\
-                        --scheduler 'dpm_solver'\
-                        --num_sample_timesteps 30\
+                        --scheduler 'ddim'\
+                        --num_sample_timesteps 100\
 
          done
     done
