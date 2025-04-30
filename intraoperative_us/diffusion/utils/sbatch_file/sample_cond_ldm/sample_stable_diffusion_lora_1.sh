@@ -20,8 +20,8 @@ for trial in VAE_finetuning VAE_random; do
                         --experiment SD_lora_empty_text\
                         --epoch $epoch\
                         --guide_w $w\
-                        --scheduler 'dpm_solver'\
-                        --num_sample_timesteps 30\
+                        --scheduler 'ddpm'\
+                        --num_sample_timesteps 1000\
 
          done
     done
