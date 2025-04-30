@@ -351,7 +351,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Invastigate the latent space')
     parser.add_argument('--save_folder', type=str, default="/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/trained_model",
                                                    help='folder to save the model')
-    parser.add_argument('--type_image', type=str, default='ius', help='type of image to investigate, ius or mask')
+    parser.add_argument('--type_image', type=str, default='ius', help='type of image to investigate, ius, mask, or one_step')
     parser.add_argument('--trial', type=str, default='trial_1', help='trial name for saving the model, it is the trial folde that contain the VAE model')
     parser.add_argument('--split', type=str, default='split_1', help='split among the 5 fold, default=split_1')
     parser.add_argument('--show_plot', action='store_true', help="show the latent space imgs, default=False")
