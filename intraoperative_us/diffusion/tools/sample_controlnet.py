@@ -282,6 +282,13 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, generated_mas
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vae', f'vae_best_{best_model}.pth'), map_location=device))
 
         # conditional ldm
+        model_experiment = condition_config['controlnet_condition_config']['pretrained_model_experiment']
+        model_path = os.path.join(trial_folder, model_experiment)
+        with open(os.path.join(model_path, 'config.yaml'), 'r') as f:
+            config_for_model = yaml.safe_load(f)
+            autoencoder_config_for_model = config_for_model['autoencoder_params']
+            diffusion_model_config_for_model = config_for_model['ldm_params']
+        epoch_model = condition_config['controlnet_condition_config']['pretrained_model_epoch']
         model = load_unet_model(diffusion_model_config, autoencoder_config, dataset_config, device)
         if  diffusion_model_config['initialization'] == 'lora':
             logging.info('SD1.5 initialization + loRA finetuning')
