@@ -10,7 +10,7 @@ import yaml
 import os
 import logging
 
-from diffusers import DDIMScheduler, PNDMScheduler, UniPCMultistepScheduler, DDPMScheduler, ControlNetModel
+from diffusers import DDIMScheduler, PNDMScheduler, UniPCMultistepScheduler, DDPMScheduler, ControlNetModel, DPMSolverMultistepScheduler
 from transformers import CLIPTextModel, CLIPTokenizer, CLIPVisionConfig, CLIPVisionModel, CLIPImageProcessor
 from diffusers import UNet2DConditionModel
 from accelerate import Accelerator
