@@ -298,7 +298,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, generated_mas
             logging.info('SD1.5 initialization + extensive finetuning')
         model.eval()
         controlnet_config = condition_config['controlnet_condition_config']
-        pretrained_model_path = os.path.join(par_dir, 'ius', trial, controlnet_config['pretrained_model_experiment'], f"ldm_{controlnet_config['pretrained_model_epoch']}.pth")
+        pretrained_model_path = os.path.join(par_dir, 'ius', trial, split, controlnet_config['pretrained_model_experiment'], f"ldm_{controlnet_config['pretrained_model_epoch']}.pth")
         model.load_state_dict(torch.load(pretrained_model_path, map_location=device), strict=False)
         logging.info(f'Load pretrained model {pretrained_model_path}')
 
