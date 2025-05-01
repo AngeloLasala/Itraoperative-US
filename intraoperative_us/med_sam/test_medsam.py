@@ -274,8 +274,6 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler,
     dsc_generated = np.load(os.path.join(save_folder, f'gen_dsc.npy')).tolist()
     haus_generated = np.load(os.path.join(save_folder, f'gen_hausdorff.npy')).tolist()
 
-    print(dsc_real)
-
     print(f"Real DSC: {np.mean(dsc_real):.4f} [{np.quantile(dsc_real, 0.25):.4f}, {np.quantile(dsc_real, 0.75):.4f}]")
     print(f"Generated DSC: {np.mean(dsc_generated):.4f} [{np.quantile(dsc_generated, 0.25):.4f}, {np.quantile(dsc_generated, 0.75):.4f}]")
     print()
