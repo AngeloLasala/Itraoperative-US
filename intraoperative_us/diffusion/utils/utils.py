@@ -94,7 +94,7 @@ def load_autoencoder(autoencoder_config, dataset_config, device):
                     out_channels=out_channels,
                     sample_size=dataset_config['im_size_h'],
                     block_out_channels=autoencoder_config['down_channels'],
-                    latent_channels=autoencoder_config.get('latent_channels', 4),  # Default is 4
+                    latent_channels=autoencoder_config['z_channels'],  # Default is 4
                     down_block_types=autoencoder_config.get('down_block_types', [
                         "DownEncoderBlock2D",
                         "DownEncoderBlock2D",
@@ -117,6 +117,7 @@ def load_autoencoder(autoencoder_config, dataset_config, device):
             autoencoder_config['autoencoder_type'],
             in_channels=in_channels,
             out_channels=out_channels,
+            latent_channels=autoencoder_config['z_channels'],
             sample_size=dataset_config['im_size_h'],
             block_out_channels=autoencoder_config['down_channels'],
             low_cpu_mem_usage=False,
@@ -136,6 +137,7 @@ def load_autoencoder(autoencoder_config, dataset_config, device):
             autoencoder_config['autoencoder_type'],
             in_channels=in_channels,
             out_channels=out_channels,
+            latent_channels=autoencoder_config['z_channels'],
             sample_size=dataset_config['im_size_h'],
             block_out_channels=autoencoder_config['down_channels'],
             low_cpu_mem_usage=False,

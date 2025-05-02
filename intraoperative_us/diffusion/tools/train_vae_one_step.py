@@ -15,6 +15,7 @@ from intraoperative_us.diffusion.models.lpips import LPIPS
 from intraoperative_us.diffusion.models.discriminator import Discriminator
 from torch.utils.data.dataloader import DataLoader
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
+from intraoperative_us.diffusion.models.vae import VAE_siamise
 from intraoperative_us.diffusion.utils.utils import get_number_parameter, load_autoencoder
 from intraoperative_us.diffusion.models.segmentation_loss import FocalDiceLoss
 from intraoperative_us.diffusion.models.unet_cond_base import get_config_value
@@ -56,7 +57,12 @@ def train(conf, save_folder, trial_name):
     #############################
 
     # Load Autoencoder model
-    model = load_autoencoder(autoencoder_config, dataset_config, device)
+    if autoencoder_config['type_of_generation'] == 'one_step':
+        logging.info('Training VAE for one step generation - CONCATENATION') 
+        model = load_autoencoder(autoencoder_config, dataset_config, device)
+    elif autoencoder_config['type_of_generation'] == 'one_step_siamise':
+        logging.info('Training VAE for one step generation - SIAMISE')
+        model = VAE_siamise(autoencoder_config, dataset_config, device)
      
     data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                             dataset_path= dataset_config['dataset_path'],
@@ -115,7 +121,7 @@ def train(conf, save_folder, trial_name):
 
     lpips_model = LPIPS().eval().to(device)         # Perceptual loss, No need to freeze lpips as lpips.py takes care of that
     mask_criterior = FocalDiceLoss()      
-    discriminator = Discriminator(im_channels=model.config['in_channels']).to(device)
+    discriminator = Discriminator(im_channels=2).to(device)
 
     optimizer_d = Adam(discriminator.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
     optimizer_g = Adam(model.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
@@ -159,11 +165,17 @@ def train(conf, save_folder, trial_name):
                 output, encoder_out = model_output
                 mean, logvar = torch.chunk(encoder_out, 2, dim=1)
             else:
-                encoder_out = model.encode(im)           # Encode image
-                mean = encoder_out.latent_dist.mean      # Mean of latent space
-                logvar = encoder_out.latent_dist.logvar  # Log-variance
-                output = model.decode(model.encode(im).latent_dist.sample()).sample
-            
+                if autoencoder_config['type_of_generation'] == 'one_step':
+                    encoder_out = model.encode(im)           # Encode image
+                    mean = encoder_out.latent_dist.mean      # Mean of latent space
+                    logvar = encoder_out.latent_dist.logvar  # Log-variance
+                    output = model.decode(model.encode(im).latent_dist.sample()).sample
+                elif autoencoder_config['type_of_generation'] == 'one_step_siamise':
+                    ## encode only the first channel of dim 1 if im
+                    out, mean, logvar = model(im)
+                    output = out.sample
+
+                    
 
             # Image Saving Logic
             if step_count % image_save_steps == 0 or step_count == 1:
@@ -250,10 +262,15 @@ def train(conf, save_folder, trial_name):
                     output, encoder_out = model_output
                     mean, logvar = torch.chunk(encoder_out, 2, dim=1)
                 else:
-                    encoder_out = model.encode(im)  # Encode image
-                    mean = encoder_out.latent_dist.mean  # Mean of latent space
-                    logvar = encoder_out.latent_dist.logvar  # Log-variance
-                    output = model.decode(model.encode(im).latent_dist.sample()).sample
+                    if autoencoder_config['type_of_generation'] == 'one_step':
+                        encoder_out = model.encode(im)  # Encode image
+                        mean = encoder_out.latent_dist.mean  # Mean of latent space
+                        logvar = encoder_out.latent_dist.logvar  # Log-variance
+                        output = model.decode(model.encode(im).latent_dist.sample()).sample
+
+                    elif autoencoder_config['type_of_generation'] == 'one_step_siamise':
+                        out, mean, logvar = model(im)
+                        output = out.sample
                     
                 val_recon_loss = recon_criterion(output, im)
                 val_recon_losses.append(val_recon_loss.item())

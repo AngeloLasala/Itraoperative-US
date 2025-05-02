@@ -210,6 +210,72 @@ class VAE(nn.Module):
         #print('output',out.shape)
         return out, encoder_output
 
+class VAE_siamise(nn.Module):
+    """
+    Class of Siamise Encododers for VAE using hugginface VAE as a backbone
+    """
+    def __init__(self, autoencoder_config, dataset_config, device):
+        super().__init__()
+        self.model = AutoencoderKL(
+                    in_channels=dataset_config['im_channels'],
+                    out_channels=dataset_config['im_channels']*2, 
+                    sample_size=dataset_config['im_size_h'],
+                    block_out_channels=autoencoder_config['down_channels'],
+                    latent_channels=autoencoder_config['z_channels'],
+                    down_block_types=autoencoder_config.get('down_block_types', [
+                        "DownEncoderBlock2D",
+                        "DownEncoderBlock2D",
+                        "DownEncoderBlock2D",
+                        "DownEncoderBlock2D"
+                    ]),
+                    up_block_types=autoencoder_config.get('up_block_types', [
+                        "UpDecoderBlock2D",
+                        "UpDecoderBlock2D",
+                        "UpDecoderBlock2D",
+                        "UpDecoderBlock2D"
+                    ])
+                ).to(device)
+
+        self.config = {'in_channels': dataset_config['im_channels']}
+
+    
+    def encode(self, x):
+        assert x.shape[1] == 2, f"Input tensor must have two channels, but got {x.shape[1]} channels"
+
+        encoder_out_img = self.model.encode(x[:,0,:,:].unsqueeze(1))     
+        encoder_out_mask = self.model.encode(x[:,1,:,:].unsqueeze(1))    
+
+        mean_img = encoder_out_img.latent_dist.mean         # Mean of latent space
+        logvar_img = encoder_out_img.latent_dist.logvar     # Log-variance
+        mean_mask = encoder_out_mask.latent_dist.mean       # Mean of latent space
+        logvar_mask = encoder_out_mask.latent_dist.logvar   # Log-variance
+
+        mean = (mean_img + mean_mask) / 2
+        logvar= torch.log((torch.exp(logvar_img) + torch.exp(logvar_mask)) / 2)
+
+        return mean, logvar
+
+    def sample(self, mean, logvar):
+        """ Reparametrization trick"""
+        # Reparam trick
+        std_comb = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std_comb)
+        z = mean + eps * std_comb
+
+        return z
+
+    def decode(self, z):
+        decoder_out = self.model.decode(z)
+        return decoder_out
+
+    def forward(self, x):
+        mean, logvar = self.encode(x)
+        z = self.sample(mean, logvar)
+        out = self.decode(z)
+
+        return out, mean, logvar
+        
+
 if __name__ == '__main__':
     model_config = {
         'z_channels': 4,
@@ -230,21 +296,32 @@ if __name__ == '__main__':
     print(model.get_number_parameter())
     print()
 
-    ## Load and save variation of VAE for costum training
-    # vae = AutoencoderKL.from_pretrained("sd-legacy/stable-diffusion-v1-5", subfolder="vae", use_safetensors=True)
-    
-    # ## save orignal configuration of SDv1.5
-    # vae.save_pretrained("vae/AutoencoderKL_SD1.5_default")
-    # model = AutoencoderKL.from_pretrained("vae/AutoencoderKL_SD1.5_default")
-    model_adapt = AutoencoderKL.from_pretrained(
-        "vae/AutoencoderKL_SD1.5_default",
-        # in_channels=1,
-        # sample_size=1,
-        # block_out_channels=[128//4, 256//4, 512//4, 512//4],
-        # low_cpu_mem_usage=False,
-        # ignore_mismatched_sizes=True
-    )
-    print(model_adapt.config)
-    for k in model_adapt.config.keys():
-        print(k, model_adapt.config[k])
+    ## VAE siamise
+    dataset_config = {
+        'im_channels': 1,
+        'im_size_h': 256
+    }
+
+    autoencoder_config = {
+        'autoencoder_type': 'stabilityai/sd-vae-ft-mse',
+        'down_channels': [64, 128, 256, 256],
+        'z_channels': 4,
+        'down_block_types': [
+            "DownEncoderBlock2D",
+            "DownEncoderBlock2D",
+            "DownEncoderBlock2D",
+            "DownEncoderBlock2D"
+        ],
+        'up_block_types': [
+            "UpDecoderBlock2D",
+            "UpDecoderBlock2D",
+            "UpDecoderBlock2D",
+            "UpDecoderBlock2D"
+        ]
+    }
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = VAE_siamise(dataset_config, autoencoder_config, device)
+    print(model)
+
 
