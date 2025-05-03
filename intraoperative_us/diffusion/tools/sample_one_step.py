@@ -63,7 +63,7 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
         return inputs.input_ids
 
     N_gen = 400
-    sampling_config = train_config["ldm_batch_size_sample"]
+    sampling_config = 2 #train_config["ldm_batch_size_sample"]
 
     N_loop = int(N_gen / sampling_config)
     for btc, times_ii in enumerate(range(N_loop)):
@@ -71,6 +71,9 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
                         autoencoder_model_config['z_channels'],
                         im_size_h,
                         im_size_w)).to(device)
+
+        ## add random shift to the latent space
+        xt = xt - 0.05
                 
         test_tokenized_captions = tokenize_captions(xt.shape[0]).to(device)
         text_embeddings = text_encoder(test_tokenized_captions)[0]         

@@ -5,13 +5,13 @@
 #SBATCH --ntasks-per-node=1          # 1 tasks per node
 #SBATCH --time=9:50:00                 # time limits: 1 hour
 #SBATCH --partition=boost_usr_prod   # partition name
-#SBATCH --error=vae_one_step.err       # standard error file
-#SBATCH --output=vae_one_step.out      # standard output file
+#SBATCH --error=vae_stack.err       # standard error file
+#SBATCH --output=vae_stack.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
 for split in 1 ; do
-    python -m intraoperative_us.diffusion.tools.train_vae_one_step --conf one_step/conf_one_step_1_siamise\
+    python -m intraoperative_us.diffusion.tools.train_vae_one_step --conf one_step/conf_one_step_1\
                                                         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
-                                                        --trial Siamise/split_1\
+                                                        --trial Stack_finetuning/split_1\
                                                         --log 'info'
 done
