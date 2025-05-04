@@ -23,7 +23,7 @@ import torch.nn.functional as F
 
 from intraoperative_us.diffusion.models.unet_cond_base import get_config_value, UNet2DConditionModelCostum
 from intraoperative_us.diffusion.scheduler.scheduler import LinearNoiseScheduler
-from intraoperative_us.diffusion.models.vae import VAE_siamise
+# from intraoperative_us.diffusion.models.vae import VAE_siamise
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
 from intraoperative_us.diffusion.utils.utils import get_best_model, load_autoencoder, load_unet_model, get_number_parameter
 from torch.utils.data import DataLoader
@@ -101,11 +101,9 @@ def train(par_dir, conf, trial, experiment_name):
             autoencoder_config = yaml.safe_load(f)['autoencoder_params']
 
         best_model = get_best_model(os.path.join(trial_folder,'vae'))
-        logging.info(f'best model  epoch {best_model}')
-        if autoencoder_config['autoencoder_type'] == 'one_step':
-            vae = load_autoencoder(autoencoder_config, dataset_config, device)
-        elif autoencoder_config['autoencoder_type'] == 'one_step_siamise':
-            vae = VAE_siamise(autoencoder_config, dataset_config, device)  
+        logging.info(f'best model  epoch {best_model}') 
+        vae = load_autoencoder(autoencoder_config, dataset_config, device)
+        print(vae)
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vae', f'vae_best_{best_model}.pth'), map_location=device))
     
     # Unet2DConditionModel
