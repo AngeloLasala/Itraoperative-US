@@ -11,7 +11,7 @@
 
 python -m intraoperative_us.diffusion.tools.train_one_step --conf one_step/conf_one_step_1\
           --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
-          --trial trial_1\
+          --trial Stack_finetuning\
           --type_image one_step\
           --experiment ldm_finetuning\
           --log info\

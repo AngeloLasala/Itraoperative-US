@@ -14,7 +14,7 @@ for exp in ldm_finetuning; do
         for epoch in 5000 6000 7000 8000 9000 ; do
                 python -m intraoperative_us.diffusion.tools.sample_one_step\
                         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
-                        --trial trial_1\
+                        --trial Stack_finetuning\
                         --split 'split_1'\
                         --experiment $exp\
                         --epoch $epoch\
