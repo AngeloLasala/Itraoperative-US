@@ -255,7 +255,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler,
         gen_dsc = np.array(gen_dsc)
         gen_hausdorff = np.array(gen_hausdorff)
 
-        save_folder = os.path.join('metrics', f'{trial}_{experiment}')
+        save_folder = os.path.join('metrics', f'{trial}_{split}_{experiment}_w_{guide_w}_{scheduler}_{epoch}')
         if not os.path.exists(save_folder):
             os.makedirs(save_folder)
 

@@ -103,7 +103,6 @@ def train(par_dir, conf, trial, experiment_name):
         best_model = get_best_model(os.path.join(trial_folder,'vae'))
         logging.info(f'best model  epoch {best_model}') 
         vae = load_autoencoder(autoencoder_config, dataset_config, device)
-        print(vae)
         vae.load_state_dict(torch.load(os.path.join(trial_folder, 'vae', f'vae_best_{best_model}.pth'), map_location=device))
     
     # Unet2DConditionModel

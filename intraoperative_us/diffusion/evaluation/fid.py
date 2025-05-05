@@ -325,7 +325,7 @@ if __name__ == "__main__":
         print(f'Epoch: {key}, FID: {value}')    
     
     ## save the FID score
-    with open(os.path.join(experiment_dir, f'w_{args.guide_w}', f'FID_score_{args.scheduler}.txt'), 'w') as f:
+    with open(os.path.join(experiment_dir, f'w_{args.guide_w}', args.scheduler, f'FID_score_{args.scheduler}.txt'), 'w') as f:
         for key, value in fid.items():
             f.write(f'Epoch: {key}, FID: {value}\n')
         
@@ -336,7 +336,7 @@ if __name__ == "__main__":
         ax.set_ylabel(f'FID', fontsize=20)
         ax.tick_params(axis='both', which='major', labelsize=16)
         ax.grid(linestyle=':')
-        plt.savefig(os.path.join(experiment_dir, 'FID_score.png'))
+        plt.savefig(os.path.join(experiment_dir, f'w_{args.guide_w}', args.scheduler, f'FID_score_{args.scheduler}.png'))
         plt.show()
  
 

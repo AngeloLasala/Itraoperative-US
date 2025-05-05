@@ -171,6 +171,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler, sh
     ax[1].tick_params(axis='both', which='major', labelsize=30)
     ax[1].legend(fontsize=30)
     ax[1].grid(linestyle=':')
+    plt.savefig(os.path.join(par_dir, trial, split, experiment, f'w_{guide_w}', scheduler, f'analysis_tumor_not_tumor_{epoch}.png'), dpi=300)
 
     
     fig, ax = plt.subplots(1, 2, figsize=(18,10), num='Hist_Tumor_not_Tumor', tight_layout=True)
@@ -193,6 +194,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler, sh
     ax[1].set_ylim([0, 10.5])
     ax[1].set_ylabel('Frequency (%)', fontsize=28)
     ax[1].grid(linestyle=':')
+    plt.savefig(os.path.join(par_dir, trial, split, experiment, f'w_{guide_w}', scheduler, f'hist_tumor_not_tumor_{epoch}.png'), dpi=300)
     plt.show()
     
 
