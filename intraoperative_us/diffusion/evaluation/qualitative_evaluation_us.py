@@ -88,7 +88,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler, sh
         for i, (gen_img, mask) in enumerate(data_gen_mask):
             ## plt the generated image and the mask
             print(gen_img.shape, mask.shape)
-            plt.figure(figsize=(25,12), num=f'gen_mask_{i}', tight_layout=True)
+            plt.figure(figsize=(25,12), num=f'gen_{i}_epoch_{epoch}.png', tight_layout=True)
             plt.subplot(1,3,2)
             plt.imshow(gen_img[0,:,:].cpu().numpy(), cmap='gray')
             plt.title('Generated image', fontsize=30)
@@ -103,6 +103,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler, sh
             plt.imshow(np.ma.masked_where(tumor_mask == 0, tumor_mask), cmap='ocean', alpha=0.3)
             plt.title('Generated image with mask', fontsize=30)
             plt.axis('off')
+            plt.savefig(os.path.join(par_dir, trial, split, experiment, f'w_{guide_w}', scheduler, f'gen_{i}_epoch_{epoch}.png'), dpi=300)
             plt.show() 
 
 

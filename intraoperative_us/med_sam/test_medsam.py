@@ -266,7 +266,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler,
 
     else:
         ## Load the metrics
-        save_folder = os.path.join('metrics', f'{trial}_{experiment}')
+        save_folder = os.path.join('metrics', f'{trial}_{split}_{experiment}_w_{guide_w}_{scheduler}_{epoch}')
 
 
     dsc_real = np.load(os.path.join(save_folder, f'real_dsc.npy')).tolist()
