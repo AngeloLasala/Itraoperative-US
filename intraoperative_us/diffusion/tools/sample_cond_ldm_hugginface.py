@@ -204,6 +204,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, generated_mas
         scheduler = DPMSolverMultistepScheduler(beta_start=0.0001,
                                                 beta_end=0.02,
                                                 beta_schedule='linear',
+                                                timestep_spacing='leading',
                                                 prediction_type=diffusion_config['prediction_type'])
     else:
         raise ValueError(f"Scheduler {diffusion_config['scheduler']} not implemented")

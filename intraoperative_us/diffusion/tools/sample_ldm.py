@@ -125,7 +125,7 @@ def infer(par_dir, conf, trial, experiment, epoch, type_image):
         scheduler = DPMSolverMultistepScheduler(beta_start=0.0001,
                                                 beta_end=0.02,
                                                 beta_schedule='linear',
-                                                clip_sample=True,
+                                                timestep_spacing='leading',
                                                 prediction_type=diffusion_config['prediction_type'])
     else:
         raise ValueError(f"Scheduler {diffusion_config['scheduler']} not implemented")

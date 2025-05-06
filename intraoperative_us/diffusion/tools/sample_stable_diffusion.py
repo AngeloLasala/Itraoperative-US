@@ -189,7 +189,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, generated_mas
                                                   beta_start=0.0001,
                                                   beta_end=0.02,
                                                   beta_schedule='linear',
-                                                  clip_sample=True,
+                                                  timestep_spacing='leading',
                                                   prediction_type=diffusion_config['prediction_type'])
 
     elif diffusion_config['scheduler'] == 'pndm':
