@@ -21,8 +21,8 @@ for trial in VAE_finetuning ; do
                             --experiment $exp\
                             --epoch $epoch\
                             --guide_w $w\
-                            --scheduler 'dpm_solver'\
-                            --num_sample_timesteps 100\
+                            --scheduler 'ddpm'\
+                            --num_sample_timesteps 1000\
 
             done
         done
