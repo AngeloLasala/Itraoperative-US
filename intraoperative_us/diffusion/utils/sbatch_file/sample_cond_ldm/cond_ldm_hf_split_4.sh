@@ -5,8 +5,8 @@
 #SBATCH --ntasks-per-node=1          # 1 tasks per node
 #SBATCH --time=24:00:00                 # time limits: 1 hour
 #SBATCH --partition=boost_usr_prod   # partition name
-#SBATCH --error=split_3.err       # standard error file
-#SBATCH --output=split_3.out      # standard output file
+#SBATCH --error=split_4.err       # standard error file
+#SBATCH --output=split_4.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
 for trial in VAE_finetuning ; do 
