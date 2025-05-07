@@ -9,9 +9,9 @@
 #SBATCH --output=sampling_3.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
-for trial in VAE_finetuning VAE_random; do 
-    for exp in cond_ldm_random cond_ldm_finetuning; do
-        for w in  3.0 5.0 7.0; do
+for trial in VAE_finetuning ; do 
+    for exp in cond_ldm_finetuning; do
+        for w in 3.0 5.0 7.0; do
             for epoch in 5000 6000 7000 8000 9000 ; do
                     python -m intraoperative_us.diffusion.tools.sample_cond_ldm_hugginface\
                             --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
@@ -22,7 +22,7 @@ for trial in VAE_finetuning VAE_random; do
                             --epoch $epoch\
                             --guide_w $w\
                             --scheduler 'dpm_solver'\
-                            --num_sample_timesteps 30\
+                            --num_sample_timesteps 15\
 
             done
         done
