@@ -22,7 +22,7 @@ for trial in VAE_finetuning ; do
                             --epoch $epoch\
                             --guide_w $w\
                             --scheduler 'dpm_solver'\
-                            --num_sample_timesteps 15\
+                            --num_sample_timesteps 60\
 
             done
         done
