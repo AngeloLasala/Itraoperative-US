@@ -1,0 +1,29 @@
+dataset_params:
+  # parent directory of the dataset
+  # local path: 
+  #            1) "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"
+  #            2) cineca: '/leonardo_work/IscrC_AIM-ORAL/Angelo/ius_data/dataset'
+  dataset_path: "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"  
+  im_channels : 1
+  im_size_h : 256         # 256
+  im_size_w : 256         # 256 
+  splitting_seed: 42      # sedd for set reprodicitbilityin random splitting
+  train_percentage: 0.8              # percentage of the dataset used for training
+  val_percentage: 0.1                # percentage of the dataset used for validation
+  test_percentage: 0.1               # percentage of the dataset used for testing
+  splitting_json: "splitting_1.json"   # FOR REPRODUCIBILITY: name of the json file containing the splitting
+  condition_config:
+    condition_types: ['image']
+
+model_params:
+  model_type: 'unet_up'
+
+train_params:
+  batch_size: 32
+  epochs : 200
+  learning_rate: 0.001
+  alpha: -1.0          # alpha <= 1.0, alpha = -1.0 for no weighting
+  gamma: 0.0          # gamma > 0 focal loss, gamma = 0 and alpha = -1.0 for CE
+  reduction: 'mean'
+  dice_weight: 0.0
+  focal_weight: 1.0

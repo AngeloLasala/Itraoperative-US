@@ -7,25 +7,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class FocalLoss(nn.Module):
-    def __init__(self, alpha=1.0, gamma=2.5, reduction='mean'):
+    def __init__(self, alpha=1.0, gamma=2.5):
         super(FocalLoss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
-        self.reduction = reduction
 
     def forward(self, inputs, targets):
-        bce = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
+        bce = F.binary_cross_entropy(inputs, targets, reduction='none')  # keep per-element
         pt = torch.exp(-bce)  # pt = p if y=1, else 1-p
-        
         alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
         
-        focal_loss = alpha_t * (1 - pt) ** self.gamma * bce
+        focal_loss = alpha_t * ((1 - pt) ** self.gamma) * bce
 
-        if self.reduction == 'mean':
-            return focal_loss.mean()
-        elif self.reduction == 'sum':
-            return focal_loss.sum()
-        return focal_loss
+        return focal_loss.mean() 
 
 
 class DiceLoss(nn.Module):
