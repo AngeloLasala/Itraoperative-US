@@ -179,6 +179,7 @@ def train(conf, save_folder, trial_name=None):
                             test_percentage=dataset_config['test_percentage'],
                             condition_config=dataset_config['condition_config'],
                             data_augmentation=True)
+    
     val_data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
                                im_channels= dataset_config['im_channels'], 
@@ -194,6 +195,7 @@ def train(conf, save_folder, trial_name=None):
     logging.info(f'len data {len(data)} - len val_data {len(val_data)}')
     logging.info('')
 
+    exit()
     data_loader = DataLoader(data, batch_size=train_config['batch_size'], shuffle=True, num_workers=0, timeout=0)
     val_data_loader = DataLoader(val_data, batch_size=train_config['batch_size'], shuffle=True, num_workers=0, timeout=0)
     
