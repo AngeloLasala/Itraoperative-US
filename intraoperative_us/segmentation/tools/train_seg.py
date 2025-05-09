@@ -23,7 +23,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from torch.utils.data.dataloader import DataLoader
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS
-from intraoperative_us.segmentation.models.losses import FocalLoss
+from intraoperative_us.segmentation.models.losses import FocalDiceLoss
 from intraoperative_us.segmentation.utils import load_model
 
 ## deactivate the warning of the torch
@@ -224,11 +224,17 @@ def train(conf, save_folder, trial_name=None):
     learning_rate = train_config['learning_rate']
     best_vloss = 1_000_000.
 
-    loss_fn = FocalLoss(alpha=train_config['alpha'], 
-                        gamma=train_config['gamma'],
-                        reduction=train_config['reduction'])
-    ## loss BCE 
-    # loss_fn = torch.nn.BCELoss()
+    loss_fn = FocalDiceLoss(alpha=train_config['alpha'], 
+                            gamma=train_config['gamma'],
+                            focal_weight=train_config['focal_weight'],
+                            dice_weight=train_config['dice_weight'],
+                            reduction=train_config['reduction'])
+    logging.info(f'Loss function...')
+    logging.info(f'alpha = {train_config["alpha"]}')
+    logging.info(f'gamma = {train_config["gamma"]}')
+    logging.info(f'focal_weight = {train_config["focal_weight"]}')
+    logging.info(f'dice_weight = {train_config["dice_weight"]}')
+    logging.info(f'reduction = {train_config["reduction"]}')
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=train_config['learning_rate'])
     
@@ -274,9 +280,9 @@ def train(conf, save_folder, trial_name=None):
         ## save the model
         if avg_vloss < best_vloss:
             best_vloss = avg_vloss
-            model_path = 'best_model.pth'
+            model_path = f'best_model.pth'
             torch.save(model.state_dict(), os.path.join(save_dir, model_path))
-
+        
         ## writer tensorboard
         writer.add_scalar('Loss/train', last_loss, epoch_idx)
         writer.add_scalar('Loss/validation', avg_vloss, epoch_idx)
@@ -292,7 +298,11 @@ def train(conf, save_folder, trial_name=None):
         ax[2].set_title('Output')
         ax[2].axis('off')
         writer.add_figure('Image', fig, epoch_idx)
-    
+
+    # save last epoch model
+    model_path = f'last_model.pth'
+    torch.save(model.state_dict(), os.path.join(save_dir, model_path))
+        
     config_file = os.path.join(save_dir, 'config.json')
     with open(config_file, 'w') as f:
         json.dump(config, f, indent=4)
