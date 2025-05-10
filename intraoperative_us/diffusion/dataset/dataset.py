@@ -404,7 +404,37 @@ class GenerateDataset(torch.utils.data.Dataset):
     Dataset of generated image loaded from the path
     """
     def __init__(self, par_dir, trial, split, experiment, guide_w, scheduler, epoch,  size, input_channels,
-                 mask=False):
+                 mask=False, num_of_images=None, data_augmentation=False, task='no_segmentation'):
+        """
+        Dataset of generated image loaded from the path
+
+        Parameters
+        ----------
+        par_dir : str
+            path of the dataset
+        trial : str
+            trial name
+        split : str
+            split name (split_1, split_2, ...)
+        experiment : str
+            experiment name (VAE_finetuning, ...)
+        guide_w : str
+            guide weight (0.5, 1.0, ...)
+        scheduler : str
+            scheduler name (ddpm, ...)
+        epoch : str
+            epoch name (3000, ...)
+        size : list
+            size of the image (height, width)
+        input_channels : int
+            number of input channels (1)
+        mask : bool 
+            if True, return the mask
+        num_of_images : int
+            number of images to load (must be equal to the number of image in real dataset)
+        data_augmentation : bool
+            if True, apply data augmentation
+        """
         self.par_dir = par_dir
         self.trial = trial
         self.split = split
@@ -415,35 +445,113 @@ class GenerateDataset(torch.utils.data.Dataset):
         self.size = size
         self.input_channels = input_channels
         self.mask = mask
+        self.task = task
+        self.num_of_images = num_of_images
+        self.data_augmentation = data_augmentation
 
         self.data_ius= self.get_eco_path()
-        self.files_data = [os.path.join(self.data_ius, f'x0_{i}.png') for i in range(len(os.listdir(self.data_ius)))]
+        if self.num_of_images is not None:
+            self.files_data = [os.path.join(self.data_ius, f'x0_{i}.png') for i in range(self.num_of_images)]
+        else:
+            self.files_data = [os.path.join(self.data_ius, f'x0_{i}.png') for i in range(len(os.listdir(self.data_ius)))]
+
 
     def __len__(self):
         return len(self.files_data)
 
     def __getitem__(self, idx):
         image_path = self.files_data[idx]
-
+        
         # read the image wiht PIL
         image = Image.open(image_path)
+
+        # read the mask with PIL
+        mask_numb = image_path.split('/')[-1].split('.')[0].split('_')[1]
+        mask_path = os.path.join(self.get_mask_images(), f'mask_{mask_numb}.png')
+        mask = Image.open(mask_path)
+        cond_inputs = {}
+
+        if self.data_augmentation:
+            image, mask = self.augmentation(image, mask)
+            if self.task == 'segmentation':
+                cond_inputs['image'] = mask
+                return image, cond_inputs
+            else:
+                return image, mask
+
+        else:
+            resize = transforms.Resize(size=self.size)
+            image = resize(image)
+            if self.input_channels == 1: image = image.convert('L')
+            image = transforms.functional.to_tensor(image)
+            image = (2 * image) - 1 
+
+            if self.mask:
+                mask = resize(mask)
+                mask = mask.convert('L')
+                mask = transforms.functional.to_tensor(mask)
+
+                if self.task == 'segmentation':
+                    cond_inputs['image'] = mask
+                    return image, cond_inputs
+                else:
+                    return image, mask
+
+            else: 
+                return image
+    
+    def augmentation(self, image, label=None):
+        """
+        Set of trasformation to apply to image.
+        """
+        ## Resize
         resize = transforms.Resize(size=self.size)
         image = resize(image)
-        if self.input_channels == 1: image = image.convert('L')
+        if label is not None: label = resize(label)
+        
+        ## random rotation to image and label
+        if torch.rand(1) > 0.5:
+            angle = np.random.randint(-30, 30)
+            image = transforms.functional.rotate(image, angle)
+            if label is not None: label = transforms.functional.rotate(label, angle)
+
+        ## random translation to image and label in each direction
+        if torch.rand(1) > 0.5:
+            translate = transforms.RandomAffine.get_params(degrees=(0.,0.), 
+                                                        translate=(0.10, 0.10),
+                                                        scale_ranges=(1.0,1.0),
+                                                        shears=(0.,0.), 
+                                                        img_size=self.size)
+            image = transforms.functional.affine(image, *translate)
+            if label is not None: label = transforms.functional.affine(label, *translate)
+
+        ## random horizontal flip
+        if torch.rand(1) > 0.5:
+            image = transforms.functional.hflip(image)
+            if label is not None: label = transforms.functional.hflip(label)
+
+        ## random vertical flip
+        if torch.rand(1) > 0.5:
+            image = transforms.functional.vflip(image)
+            if label is not None: label = transforms.functional.vflip(label)
+            
+        ## random brightness and contrast
+        if torch.rand(1) > 0.5:
+            image = transforms.ColorJitter(brightness=0.5, contrast=0.5)(image)
+
+        
+        ## random gamma correction
+        if torch.rand(1) > 0.5:
+            gamma = np.random.uniform(0.5, 1.5)
+            image = transforms.functional.adjust_gamma(image, gamma)
+      
         image = transforms.functional.to_tensor(image)
-        image = (2 * image) - 1 
+        if label is not None: label = transforms.functional.to_tensor(label)
+        image = (2 * image) - 1  
 
-        if self.mask:
-            mask_numb = image_path.split('/')[-1].split('.')[0].split('_')[1]
-            mask_path = os.path.join(self.get_mask_images(), f'mask_{mask_numb}.png')
-            mask = Image.open(mask_path)
-            mask = resize(mask)
-            mask = mask.convert('L')
-            mask = transforms.functional.to_tensor(mask)
-
-            return image, mask
-
-        else: 
+        if label is not None:
+            return image, label
+        else:
             return image
 
     def get_eco_path(self):
@@ -461,6 +569,7 @@ class GenerateDataset(torch.utils.data.Dataset):
         data_mask = os.path.join('/', *data_mask)
     
         return data_mask
+
 
 
 if __name__ == '__main__':

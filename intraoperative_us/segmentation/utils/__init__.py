@@ -39,9 +39,7 @@ def load_dataset(dataset_config):
                                 condition_config=dataset_config['condition_config'],
                                 data_augmentation=False)
 
-    if dataset_config['dataset_type'] == 'only_real' or dataset_config['dataset_type'] == 'real_and_generated':
-        
-        data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+    data = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                             dataset_path= dataset_config['dataset_path'],
                             im_channels= dataset_config['im_channels'], 
                             splitting_json=dataset_config['splitting_json'],
@@ -53,12 +51,13 @@ def load_dataset(dataset_config):
                             condition_config=dataset_config['condition_config'],
                             data_augmentation=True)
 
+    if dataset_config['dataset_type'] == 'only_real':
         logging.info('Experiment: only real data')
         logging.info(f'len data {len(data)} - len val_data {len(val_data)}')
         logging.info('')
         return data, val_data
 
-    elif dataset_config['dataset_type'] == 'only_generated' or dataset_config['dataset_type'] == 'real_and_generated':
+    elif dataset_config['dataset_type'] == 'only_gen':
         from intraoperative_us.diffusion.dataset.dataset import GenerateDataset
 
         data_gen = GenerateDataset(par_dir = dataset_config['par_dir'],
@@ -70,15 +69,34 @@ def load_dataset(dataset_config):
                                    epoch = dataset_config['epoch'],
                                    size=[dataset_config['im_size_h'], dataset_config['im_size_w']], 
                                    input_channels=dataset_config['im_channels'],
-                                   mask=True)
-                            
+                                   mask=True,
+                                   num_of_images=len(data),
+                                   data_augmentation=True,
+                                   task='segmentation')
+                        
         logging.info('Experiment: Replacement experiment')
         logging.info(f'len data {len(data_gen)} - len val_data {len(val_data)}')
         logging.info('')
+        return data_gen, val_data
 
-    elif dataset_config['dataset_type'] == 'real_and_generated':
+    elif dataset_config['dataset_type'] == 'real_and_gen':
+        from intraoperative_us.diffusion.dataset.dataset import GenerateDataset
+
+        data_gen = GenerateDataset(par_dir = dataset_config['par_dir'],
+                                   trial = dataset_config['trial'], 
+                                   split = dataset_config['split'], 
+                                   experiment = dataset_config['experiment'],
+                                   guide_w = dataset_config['guide_w'], 
+                                   scheduler = dataset_config['scheduler'],
+                                   epoch = dataset_config['epoch'],
+                                   size=[dataset_config['im_size_h'], dataset_config['im_size_w']], 
+                                   input_channels=dataset_config['im_channels'],
+                                   mask=True,
+                                   num_of_images=len(data),
+                                   data_augmentation=True,
+                                   task='segmentation')
         ## concatenate the two datasets
-        data_gen_real = torch.utils.data.ConcatDataset([data, gen_data])
+        data_gen_real = torch.utils.data.ConcatDataset([data, data_gen])
 
         logging.info('Experiment: Augmentation experiment')
         logging.info(f'len data {len(data_gen_real)} - len val_data {len(val_data)}')
@@ -86,10 +104,6 @@ def load_dataset(dataset_config):
 
         return data_gen_real, val_data
 
-
-       
-       
-    return train_dataset, val_dataset
 def load_model(model_config, dataset_config):
     """
     Load the UNet model from a specified path.
