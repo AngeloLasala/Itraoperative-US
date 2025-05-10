@@ -4,7 +4,10 @@ import torch.nn.functional as F
 
 
 class FocalLoss(nn.Module):
-    def __init__(self, alpha: float = 0.25, gamma: float = 2.0, reduction: str = "none"):
+    def __init__(self, alpha: float = 0.25,
+                       gamma: float = 2.0, 
+                       dynamic_alpha: bool = False,  
+                       reduction: str = "none"):
         """
         Focal Loss as used in RetinaNet: https://arxiv.org/abs/1708.02002
 
@@ -22,6 +25,7 @@ class FocalLoss(nn.Module):
 
         self.alpha = alpha
         self.gamma = gamma
+        self.dynamic_alpha = dynamic_alpha
         self.reduction = reduction
 
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
@@ -41,7 +45,17 @@ class FocalLoss(nn.Module):
         ce_loss = F.binary_cross_entropy(inputs, targets, reduction="none")
         p_t = p * targets + (1 - p) * (1 - targets)
         loss = ce_loss * ((1 - p_t) ** self.gamma)
+        
+        # Dynamic alpha based on target class frequency
+        if self.dynamic_alpha:
+            pos = (targets == 1).float().sum()
+            neg = (targets == 0).float().sum()
+            total = pos + neg
+            alpha = neg / total if total > 0 else 0.5  
+            alpha_t = alpha * targets + (1 - alpha) * (1 - targets)
+            loss = alpha_t * loss
 
+        # fixed alpha
         if self.alpha >= 0:
             alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
             loss = alpha_t * loss
@@ -95,11 +109,15 @@ class DiceLoss(nn.Module):
             return dice_loss
 
 class FocalDiceLoss(nn.Module):
-    def __init__(self, alpha: float = 0.25, gamma: float = 2.0, smooth: float = 1e-6, reduction: str = "mean",
-                focal_weight: float = 1.0, dice_weight: float = 1.0):
+    def __init__(self, alpha: float = 0.25,
+                       gamma: float = 2.0,
+                       smooth: float = 1e-6, 
+                       reduction: str = "mean",
+                       focal_weight: float = 1.0,
+                       dice_weight: float = 1.0):
         """
         Combined Focal and Dice Loss.
-
+  
         Parameters:
         ----------
             alpha (float): Balances the importance of positive/negative examples for Focal Loss. Default: 0.25
@@ -108,7 +126,7 @@ class FocalDiceLoss(nn.Module):
             reduction (str): 'none' | 'mean' | 'sum'. Default: 'mean'
         """
         super(FocalDiceLoss, self).__init__()
-        self.focal_loss = FocalLoss(alpha=alpha, gamma=gamma, reduction=reduction)
+        self.focal_loss = FocalLoss(alpha=alpha, gamma=gamma, dynamic_alpha=dynamic_alpha, reduction=reduction)
         self.dice_loss = DiceLoss(smooth=smooth, reduction=reduction)
         self.focal_weight = focal_weight
         self.dice_weight = dice_weight

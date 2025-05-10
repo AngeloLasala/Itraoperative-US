@@ -102,12 +102,14 @@ def train(conf, save_folder, trial_name=None):
 
     loss_fn = FocalDiceLoss(alpha=train_config['alpha'], 
                             gamma=train_config['gamma'],
+                            dynamic_alpha=train_config['dynamic_alpha'],
                             focal_weight=train_config['focal_weight'],
                             dice_weight=train_config['dice_weight'],
                             reduction=train_config['reduction'])
     logging.info(f'Loss function...')
     logging.info(f'alpha = {train_config["alpha"]}')
     logging.info(f'gamma = {train_config["gamma"]}')
+    logging.info(f'dynamic_alpha = {train_config["dynamic_alpha"]}')
     logging.info(f'focal_weight = {train_config["focal_weight"]}')
     logging.info(f'dice_weight = {train_config["dice_weight"]}')
     logging.info(f'reduction = {train_config["reduction"]}')
