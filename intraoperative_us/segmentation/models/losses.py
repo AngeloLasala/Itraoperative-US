@@ -55,10 +55,11 @@ class FocalLoss(nn.Module):
             alpha_t = alpha * targets + (1 - alpha) * (1 - targets)
             loss = alpha_t * loss
 
-        # fixed alpha
-        if self.alpha >= 0:
-            alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
-            loss = alpha_t * loss
+        else:
+            # fixed alpha
+            if self.alpha >= 0 :
+                alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
+                loss = alpha_t * loss
 
         if self.reduction == "mean":
             return loss.mean()
@@ -112,6 +113,7 @@ class FocalDiceLoss(nn.Module):
     def __init__(self, alpha: float = 0.25,
                        gamma: float = 2.0,
                        smooth: float = 1e-6, 
+                       dynamic_alpha: bool = False,
                        reduction: str = "mean",
                        focal_weight: float = 1.0,
                        dice_weight: float = 1.0):
