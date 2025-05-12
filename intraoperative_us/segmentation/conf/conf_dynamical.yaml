@@ -43,7 +43,7 @@ train_params:
   ## gamma > 0 focal loss ##
   ## gamma = 2.0 default for Focal Loss
   #gamma = 0 and alpha = -1.0 for CE        
-  gamma: 2.0  
+  gamma: 0.0  
   ## True -> use dynamic alpha ##
   # weight proportional to the inverse of frequency
   # False -> use alpha value

@@ -42,7 +42,12 @@ train_params:
   alpha: -1.0          
   ## gamma > 0 focal loss,
   ## gamma = 2.0 default for Focal Loss
-  #gamma = 0 and alpha = -1.0 for CE   
+  #gamma = 0 and alpha = -1.0 for CE 
+  gamma: 0.0
+  ## True -> use dynamic alpha ##
+  # weight proportional to the inverse of frequency
+  # False -> use alpha value
+  # True  -> use dynamic alpha and deactivate alpha  
   dynamic_alpha: False
   dice_weight: 0.0
   focal_weight: 1.0
