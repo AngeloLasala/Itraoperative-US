@@ -111,13 +111,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     experiment_list = [ 
-                        # "VAE_finetuning_split_1_cond_ldm_finetuning_w_3.0_ddpm_6000",
+                        "VAE_finetuning_split_1_cond_ldm_finetuning_w_3.0_ddpm_6000",
                         # "VAE_finetuning_split_1_cond_ldm_finetuning_w_3.0_dpm_solver_5000",
                         # "VAE_random_split_1_cond_ldm_finetuning_w_3.0_ddpm_8000",
                         # "VAE_random_split_1_cond_ldm_finetuning_w_3.0_dpm_solver_8000",
-                        # "VAE_finetuning_split_1_Controlnet_finetuning_empty_text_w_5.0_ddpm_7000",
+                        "VAE_finetuning_split_1_Controlnet_lora_empty_text_w_3.0_ddpm_5000",
+                        "VAE_finetuning_split_1_Controlnet_finetuning_empty_text_w_5.0_ddpm_7000",
                         # "VAE_finetuning_split_1_Controlnet_finetuning_empty_text_w_5.0_dpm_solver_7000",
-                        "VAE_finetuning_split_1_Controlnet_lora_empty_text_w_3.0_ddpm_5000"
                         ]
 
     main(args.metrics_folder, experiment_list)

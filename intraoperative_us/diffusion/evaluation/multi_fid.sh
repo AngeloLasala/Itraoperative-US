@@ -1,9 +1,9 @@
 #!/bin/bash
-for trial in VAE_random ; do
-    for split in split_1; do
-        for exp in Controlnet_lora_empty_text ; do
+for trial in VAE_finetuning ; do
+    for split in split_4; do
+        for exp in cond_ldm_finetuning ; do
             for w in 3.0; do
-                for scheduler in ddpm ddim dpm_solver ; do
+                for scheduler in ddpm ; do
                     python fid.py --trial $trial\
                                   --split $split\
                                   --experiment $exp\
