@@ -195,7 +195,7 @@ def train(conf, save_folder, trial_name=None):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Train VAE on MNIST or CelebA-HQ')
+    parser = argparse.ArgumentParser(description='Train segmentation model for tumor detection')
     parser.add_argument('--conf', type=str, default='conf', help='yaml configuration file')  
     parser.add_argument('--save_folder', type=str, default='trained_model', help='folder to save the model, default = trained_model')
     parser.add_argument('--trial_name', type=str, default=None, help='name of the trial')
