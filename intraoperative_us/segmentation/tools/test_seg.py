@@ -114,6 +114,7 @@ def infer(experiment_dir, config, dataset_split):
         ax[2].set_title('Prediction', fontsize=18)
         ax[2].axis('off')
         plt.savefig(os.path.join(save_result_dir, f'image_{ii}.png'), dpi=300)
+        plt.close(fig)
 
         dsc, haus = compute_metrics(mask_gt, mask_pred)
         dsc_list.append(dsc)
@@ -123,6 +124,7 @@ def infer(experiment_dir, config, dataset_split):
     dsc_list = np.array(dsc_list)
     hausdorff_list = np.array(hausdorff_list)
     np.save(os.path.join(save_result_dir, 'dsc.npy'), dsc_list)
+    np.save(os.path.join(save_result_dir, 'hausdorff.npy'), hausdorff_list)
     
     print(f'DSC: {np.mean(dsc_list)} [{np.quantile(dsc_list, 0.25)}, {np.quantile(dsc_list, 0.75)}]') 
     print(f'Hausdorff: {np.mean(hausdorff_list)} [{np.quantile(hausdorff_list, 0.25)}, {np.quantile(hausdorff_list, 0.75)}]')
