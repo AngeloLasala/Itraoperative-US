@@ -93,6 +93,7 @@ def infer(experiment_dir, config, dataset_split):
 
     ## Test
     dsc_list, hausdorff_list = [], []
+    torch.cuda.empty_cache()
     for ii, data in enumerate(test_data_loader):
         img = data[0].to(device)
         label = data[1]['image'].to(device)
