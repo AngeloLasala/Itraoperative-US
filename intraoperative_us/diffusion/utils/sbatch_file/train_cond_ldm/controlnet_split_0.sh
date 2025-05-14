@@ -5,8 +5,8 @@
 #SBATCH --ntasks-per-node=1          # 1 tasks per node
 #SBATCH --time=24:00:00                 # time limits: 1 hour
 #SBATCH --partition=boost_usr_prod   # partition name
-#SBATCH --error=controlnet_1.err       # standard error file
-#SBATCH --output=controlnet_1.out      # standard output file
+#SBATCH --error=contr_split_0.err       # standard error file
+#SBATCH --output=contr_split_0.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
 python -m intraoperative_us.diffusion.tools.train_controlnet --conf controlnet/conf_controlnet_split_0\

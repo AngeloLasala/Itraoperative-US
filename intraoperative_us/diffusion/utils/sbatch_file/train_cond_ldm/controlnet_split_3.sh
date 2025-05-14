@@ -5,11 +5,11 @@
 #SBATCH --ntasks-per-node=1          # 1 tasks per node
 #SBATCH --time=24:00:00                 # time limits: 1 hour
 #SBATCH --partition=boost_usr_prod   # partition name
-#SBATCH --error=controlnet_1.err       # standard error file
-#SBATCH --output=controlnet_1.out      # standard output file
+#SBATCH --error=contr_split_3.err       # standard error file
+#SBATCH --output=contr_split_3.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
-python -m intraoperative_us.diffusion.tools.train_controlnet --conf controlnet/conf_controlnet_1\
+python -m intraoperative_us.diffusion.tools.train_controlnet --conf controlnet/conf_controlnet_split_3\
           --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
           --trial VAE_finetuning\
           --type_image ius\
