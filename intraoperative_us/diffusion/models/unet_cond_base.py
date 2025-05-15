@@ -336,6 +336,7 @@ if __name__ == '__main__':
         'unet_path': "/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models",
         # in_channels: 4,  i.e. z_channels
         # out_channels: 4, i.e. z_channels
+        'initialization': 'random',
         'sample_size': 32,                    ## shape of the input of autoencoder
         'z_channels': 4,                           ## z_channels of the autoencoder  
         'down_channels': [ 128, 256, 256, 256],
@@ -349,6 +350,7 @@ if __name__ == '__main__':
         'num_down_layers': 2,
         'num_mid_layers': 2,
         'num_up_layers': 2,
+        'cross_attention_dim' : 768
         'condition_config': {
             'condition_types': ['image'],
             'text_condition_config': {
