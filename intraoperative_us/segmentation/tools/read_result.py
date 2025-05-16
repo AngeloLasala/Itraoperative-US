@@ -37,8 +37,6 @@ def main(save_folder, trial_list, split_list, experiment_list, dataset_split):
             for i, experiment in enumerate(experiment_list):
                 dsc = np.load(os.path.join(save_folder, trial, split, experiment, f'{dataset_split}_result', 'dsc.npy'))
                 haus = np.load(os.path.join(save_folder, trial, split, experiment, f'{dataset_split}_result', 'hausdorff.npy'))
-                ## change the value inf with 0
-                dsc[dsc == np.inf] = 0
                 haus[haus == np.inf] = 256
 
                 train_loss = np.load(os.path.join(save_folder, trial, split, experiment, 'model', 'train_loss.npy'))
