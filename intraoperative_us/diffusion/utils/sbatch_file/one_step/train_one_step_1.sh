@@ -5,8 +5,8 @@
 #SBATCH --ntasks-per-node=1          # 1 tasks per node
 #SBATCH --time=24:00:00                 # time limits: 1 hour
 #SBATCH --partition=boost_usr_prod   # partition name
-#SBATCH --error=sd_random.err       # standard error file
-#SBATCH --output=sd_random.out      # standard output file
+#SBATCH --error=split_1.err       # standard error file
+#SBATCH --output=split_1.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
 python -m intraoperative_us.diffusion.tools.train_one_step --conf one_step/conf_one_step_1\
