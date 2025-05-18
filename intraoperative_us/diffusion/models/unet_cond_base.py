@@ -350,7 +350,7 @@ if __name__ == '__main__':
         'num_down_layers': 2,
         'num_mid_layers': 2,
         'num_up_layers': 2,
-        'cross_attention_dim' : 768
+        'cross_attention_dim' : 768,
         'condition_config': {
             'condition_types': ['image'],
             'text_condition_config': {

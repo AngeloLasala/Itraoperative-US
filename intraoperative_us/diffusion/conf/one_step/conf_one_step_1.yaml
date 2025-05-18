@@ -94,6 +94,7 @@ ldm_params:
   num_down_layers : 2                       ## hf leyers_per_block 2
   num_mid_layers : 2
   num_up_layers : 2
+  cross_attention_dim : 768
   condition_config:
     ## conditional type is both for CFG nad ControlNET
     condition_types: ['image']      

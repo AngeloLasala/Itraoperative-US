@@ -120,7 +120,7 @@ def train(conf, save_folder, trial_name):
     disc_criterion = torch.nn.MSELoss()            # Disc Loss can even be BCEWithLogits MSELoss()
 
     lpips_model = LPIPS().eval().to(device)         # Perceptual loss, No need to freeze lpips as lpips.py takes care of that
-    mask_criterior = FocalDiceLoss()      
+    # mask_criterior = FocalDiceLoss()      
     discriminator = Discriminator(im_channels=2).to(device)
 
     optimizer_d = Adam(discriminator.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
@@ -199,6 +199,12 @@ def train(conf, save_folder, trial_name):
                 writer.add_image('Output_img', output_grid_img, global_step=step_count)
                 writer.add_image('Output_mask', output_grid_mask, global_step=step_count)
                 
+            if step_count > disc_step_start:
+                disc_fake_pred = discriminator(output)
+                disc_fake_loss = disc_criterion(disc_fake_pred,
+                                                torch.ones(disc_fake_pred.shape,device=disc_fake_pred.device))
+                g_loss += train_config['disc_weight'] * disc_fake_loss 
+                gen_losses.append(train_config['disc_weight'] * disc_fake_loss.item())
 
             recon_loss = recon_criterion(output, im)
             recon_losses.append(recon_loss.item())
@@ -207,22 +213,11 @@ def train(conf, save_folder, trial_name):
             kl_losses.append(train_config['kl_weight'] * kl_loss.item())
             g_loss = recon_loss + train_config['kl_weight'] * kl_loss
 
-            if step_count > disc_step_start:
-                disc_fake_pred = discriminator(output)
-                disc_fake_loss = disc_criterion(disc_fake_pred,
-                                                torch.ones(disc_fake_pred.shape,device=disc_fake_pred.device))
-                g_loss += train_config['disc_weight'] * disc_fake_loss 
-                gen_losses.append(train_config['disc_weight'] * disc_fake_loss.item())
-
 
             lpips_loss = torch.mean(lpips_model(output[:,0,:,:].unsqueeze(1), im[:,0,:,:].unsqueeze(1))) ## perception loss only for the img  
             perceptual_losses.append(train_config['perceptual_weight'] * lpips_loss.item())
 
-            mask_loss = mask_criterior(output[:,1,:,:].unsqueeze(1), im[:,1,:,:].unsqueeze(1))
-            focal_losses.append(train_config['focal_weight'] * mask_loss.item())
-
             g_loss += train_config['perceptual_weight'] * lpips_loss   
-            g_loss += train_config['focal_weight'] * mask_loss
             g_loss.backward()
             losses.append(g_loss.item())            
             ############################################################################
@@ -278,8 +273,6 @@ def train(conf, save_folder, trial_name):
                 val_lpips_loss = torch.mean(lpips_model(output[:,0,:,:].unsqueeze(1), im[:,0,:,:].unsqueeze(1))) 
                 val_perceptual_losses.append(train_config['perceptual_weight'] * val_lpips_loss.item())
 
-                val_mask_loss = mask_criterior(output[:,1,:,:].unsqueeze(1), im[:,1,:,:].unsqueeze(1))
-                val_focal_losses.append(train_config['focal_weight'] * val_mask_loss.item())
 
         # Track best performance, and save the model's state
         if np.mean(val_recon_losses) < best_vloss:
