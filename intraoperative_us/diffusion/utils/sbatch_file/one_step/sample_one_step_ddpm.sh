@@ -9,14 +9,14 @@
 #SBATCH --output=sampling_ddpm.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
-for exp in ldm_finetuning; do
+for exp in Stack_finetuning Stack_random; do
     for w in -1.0; do
         for epoch in 5000 6000 7000 8000 9000 ; do
                 python -m intraoperative_us.diffusion.tools.sample_one_step\
                         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
                         --trial Stack_finetuning\
                         --split 'split_1'\
-                        --experiment $exp\
+                        --experiment ldm_finetuning\
                         --epoch $epoch\
                         --guide_w $w\
                         --scheduler 'ddpm'\
