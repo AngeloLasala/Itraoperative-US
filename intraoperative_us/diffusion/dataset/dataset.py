@@ -575,7 +575,7 @@ class GenerateDataset(torch.utils.data.Dataset):
 if __name__ == '__main__':
     current_directory = os.path.dirname(__file__)
     par_dir = os.path.dirname(current_directory)
-    conf = os.path.join(par_dir, 'conf', f'conf_one_step.yaml')
+    conf = os.path.join(par_dir, 'conf', f'one_step/conf_one_step_1.yaml')
 
     with open(conf, 'r') as file:
         try:
@@ -584,7 +584,7 @@ if __name__ == '__main__':
             print(exc)
     print(config['dataset_params'])
     dataset_config = config['dataset_params']
-    splitting = 'splitting_1.json'
+    splitting = 'splitting_4.json'
 
     dataset = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                                dataset_path= dataset_config['dataset_path'],
