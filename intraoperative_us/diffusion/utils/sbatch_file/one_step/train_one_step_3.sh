@@ -5,14 +5,13 @@
 #SBATCH --ntasks-per-node=1          # 1 tasks per node
 #SBATCH --time=24:00:00                 # time limits: 1 hour
 #SBATCH --partition=boost_usr_prod   # partition name
-#SBATCH --error=split_2.err       # standard error file
-#SBATCH --output=split_2.out      # standard output file
-#SBATCH --output=split_2.out      # standard output file
+#SBATCH --error=split_3.err       # standard error file
+#SBATCH --output=split_3.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
 python -m intraoperative_us.diffusion.tools.train_one_step --conf one_step/conf_one_step_3\
           --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
           --trial Stack_finetuning\
           --type_image one_step\
-          --experiment ldm_random\
+          --experiment ldm_finetuning\
           --log info\
