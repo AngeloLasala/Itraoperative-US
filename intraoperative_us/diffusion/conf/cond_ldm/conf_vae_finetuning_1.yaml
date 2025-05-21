@@ -3,7 +3,7 @@ dataset_params:
   # local path: 
   #            1) "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"
   #            2) cineca: '/leonardo_work/IscrC_AIM-ORAL/Angelo/ius_data/dataset'
-  dataset_path: "/leonardo_work/IscrC_AIM-ORAL/Angelo/ius_data/dataset"  
+  dataset_path: "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"  
   im_channels : 1
   im_size_h : 256         # 256
   im_size_w : 256         # 256 
@@ -19,7 +19,7 @@ autoencoder_params:
    ## '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default' -> architecture from huggingface
    ## cineca: '/leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'
    ## 'scratch -> old version'
-  autoencoder_type: '/leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'         
+  autoencoder_type: '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models/vae/AutoencoderKL_SD1.5_default'         
   ## 'random' -> random initialization, 
   ## 'SD1.5'  -> SD1.5 initialization from hugginface
   ## 'only_D' -> E from SD1.5 and D 
@@ -60,13 +60,13 @@ diffusion_params:
   ## 'pndm'   -> PNDM scheduler from hugginface - ONLY for sampling
   scheduler: 'ddpm'
   ## local path: '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
-  ## cineca: '/leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
+  ## cineca: '/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/scheduler/'
   scheduler_path: /leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/scheduler/
   prediction_type: 'epsilon'     # v_prediction, epsilon
   num_sample_timesteps : 1000
   num_train_timesteps : 1000
-  beta_start : 0.0015
-  beta_end : 0.0195
+  beta_start : 0.001
+  beta_end : 0.02
   lr_scheduler: "costant"             # The scheduler type to use. Choose between ["linear", "cosine", "cosine_with_restarts", "polynomial",'"constant", "constant_with_warmup"
   lr_warmup_steps: 500                # Number of steps for the warmup in the lr scheduler
 
@@ -74,7 +74,7 @@ ldm_params:
   unet: unet_cond/UNet2DConditionModel_SD1.5_default     ## path of hugginface model
   ## local : "/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models"
   ## cineca: "/leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/models"
-  unet_path: "/leonardo_work/IscrC_AIM-ORAL/Angelo/Itraoperative-US/intraoperative_us/diffusion/models"
+  unet_path: "/home/angelo/Documenti/Itraoperative-US/intraoperative_us/diffusion/models"
   ## 'random' -> random initialization
   ## 'SD1.5'  -> SD1.5 initialization from hugginface - for exstensive fine-tuning
   initialization: 'SD1.5'
@@ -94,6 +94,7 @@ ldm_params:
   num_mid_layers : 2
   num_up_layers : 2
   cross_attention_dim : 768
+  prompt: "Intraoperative brain ultrasound, tumor visible, grayscale medical image"                                ## deafault "" means deactivate text prompt                
   condition_config:
     ## conditional type is both for CFG nad ControlNET
     condition_types: ['image']      

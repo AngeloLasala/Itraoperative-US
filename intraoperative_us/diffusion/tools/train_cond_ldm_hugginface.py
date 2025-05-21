@@ -113,8 +113,10 @@ def train(par_dir, conf, trial, experiment_name):
     ## TEXT conditioning with CLIP text model
     tokenizer = CLIPTokenizer.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['tokenizer']))
     text_encoder = CLIPTextModel.from_pretrained(os.path.join(diffusion_model_config['unet_path'], diffusion_model_config['text_encoder']), use_safetensors=True)
-    def tokenize_captions(current_batch_size):
-        captions = [""] * current_batch_size
+    prompt = diffusion_model_config['prompt']
+    logging.info(f'Prompt: {prompt}')
+    def tokenize_captions(prompt, current_batch_size):
+        captions = [prompt] * current_batch_size
         inputs = tokenizer(
             captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
         )
@@ -176,7 +178,7 @@ def train(par_dir, conf, trial, experiment_name):
                 im = data
 
             im = im.float()
-            test_tokenized_captions = tokenize_captions(im.shape[0]).to(accelerator.device)
+            test_tokenized_captions = tokenize_captions(prompt, im.shape[0]).to(accelerator.device)
 
 
             #############  Handiling the condition input for cond LDM ########################################
