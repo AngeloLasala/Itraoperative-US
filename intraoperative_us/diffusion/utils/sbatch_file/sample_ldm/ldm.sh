@@ -14,7 +14,7 @@ for trial in split_0; do
             python -m intraoperative_us.diffusion.tools.sample_ldm\
                     --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
                     --trial $trial\
-                    --experiment uncond_ldm_1\
+                    --experiment uncond_ldm\
                     --type_image mask\
                     --epoch $epoch\
 
