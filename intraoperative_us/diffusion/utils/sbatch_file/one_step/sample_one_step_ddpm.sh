@@ -16,7 +16,7 @@ for split in split_0 split_2 split_3 split_4; do
                         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
                         --trial Stack_finetuning\
                         --split $split\
-                        --experiment ldm_random\
+                        --experiment ldm_finetuning\
                         --epoch $epoch\
                         --guide_w $w\
                         --scheduler 'ddpm'\
