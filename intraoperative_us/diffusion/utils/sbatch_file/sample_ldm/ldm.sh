@@ -9,7 +9,7 @@
 #SBATCH --output=ldm.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
-for trial in split_0; do
+for trial in split_1 split_2; do
     for epoch in  3000 ; do
             python -m intraoperative_us.diffusion.tools.sample_ldm\
                     --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
@@ -20,3 +20,17 @@ for trial in split_0; do
 
         done
 done
+
+python -m intraoperative_us.diffusion.tools.sample_ldm\
+                    --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
+                    --trial split_3\
+                    --experiment uncond_ldm\
+                    --type_image mask\
+                    --epoch 1000\
+
+python -m intraoperative_us.diffusion.tools.sample_ldm\
+                    --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
+                    --trial split_4\
+                    --experiment uncond_ldm\
+                    --type_image mask\
+                    --epoch 1500\
