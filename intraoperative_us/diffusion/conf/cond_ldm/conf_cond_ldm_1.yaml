@@ -94,7 +94,7 @@ ldm_params:
   num_mid_layers : 2
   num_up_layers : 2
   cross_attention_dim : 768
-  prompt: "Intraoperative brain ultrasound, tumor visible, grayscale medical image"
+  prompt: ""                                ## "Intraoperative brain ultrasound, tumor visible, grayscale medical image"
   condition_config:
     ## conditional type is both for CFG nad ControlNET
     condition_types: ['image']      
