@@ -49,6 +49,7 @@ def sample(model, scheduler, train_config, sampling_config,
     if device == 'cuda':
         torch.cuda.manual_seed_all(seed)
 
+    logging.info(f"Sampling {sampling_config['N_gen']} images with batch size {sampling_config['sampling_batch']}")
     N_loop = int(sampling_config['N_gen'] / sampling_config['sampling_batch'])
     for btc, times_ii in enumerate(range(N_loop)):
         xt = torch.randn((sampling_config['sampling_batch'],
