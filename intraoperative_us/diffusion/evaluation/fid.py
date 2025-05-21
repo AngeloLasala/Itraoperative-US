@@ -281,8 +281,7 @@ def fid_experiment(conf, experiment_dir, batch_size=50, device=None, dims=2048, 
         splitting_dict = json.load(file)
     subjects_files = splitting_dict['train']
     data_real = [os.path.join(dataset_path, subject, 'volume') for subject in subjects_files]
-       
-    # Fake images validation
+        # Fake images validation
     fid_values = {}
     for epoch in epoch_list:
         data_fake = [os.path.join(experiment_dir, f'samples_ep_{epoch}', 'ius')]
