@@ -7,12 +7,12 @@
 #SBATCH --partition=boost_usr_prod   # partition name
 #SBATCH --error=ldm.err       # standard error file
 #SBATCH --output=ldm.out      # standard output file
-#SBATCH --account=IscrC_Med-LMGM     # account name
+#SBATCH --account=IscrC_AIM-ORAL     # account name
 
 for trial in split_0; do
     for epoch in  3000 ; do
             python -m intraoperative_us.diffusion.tools.sample_ldm\
-                    --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
+                    --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
                     --trial $trial\
                     --experiment uncond_ldm\
                     --type_image mask\
