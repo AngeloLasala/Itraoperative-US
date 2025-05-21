@@ -9,8 +9,8 @@
 #SBATCH --output=ldm.out      # standard output file
 #SBATCH --account=IscrC_Med-LMGM     # account name
 
-for trial in small_vae; do
-    for epoch in 500 1000 1500 2000 2500 3000 ; do
+for trial in split_0; do
+    for epoch in  3000 ; do
             python -m intraoperative_us.diffusion.tools.sample_ldm\
                     --save_folder '/leonardo_work/IscrC_Med-LMGM/Angelo/trained_model/ius_diffusion'\
                     --trial $trial\

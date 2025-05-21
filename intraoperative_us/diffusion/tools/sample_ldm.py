@@ -160,7 +160,7 @@ def infer(par_dir, conf, trial, experiment, epoch, type_image):
 
 
     # Create output directories
-    save_folder = os.path.join(model_dir, f'w_-1.0', f"{diffusion_config['scheduler']}", f'samples_ep_{epoch}')
+    save_folder = os.path.join(model_dir, f'w_-1.1', f"{diffusion_config['scheduler']}", f'samples_ep_{epoch}')
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
     else:
