@@ -9,13 +9,13 @@
 #SBATCH --output=sampling_ddpm.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
-for exp in Stack_random; do
+for split in split_0 split_2 split_3 split_4; do
     for w in -1.0; do
         for epoch in 5000 6000 7000 8000 9000 ; do
                 python -m intraoperative_us.diffusion.tools.sample_one_step\
                         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
                         --trial Stack_finetuning\
-                        --split 'split_1'\
+                        --split $split\
                         --experiment ldm_random\
                         --epoch $epoch\
                         --guide_w $w\
