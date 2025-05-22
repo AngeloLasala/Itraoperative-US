@@ -9,7 +9,7 @@
 #SBATCH --output=sampling_ddpm.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
-for exp in cond_ldm_random; do
+for exp in cond_ldm_finetuning; do
     for w in  3.0 5.0 7.0; do
         for epoch in 5000 6000 7000 8000 9000 ; do
                 python -m intraoperative_us.diffusion.tools.sample_cond_ldm_hugginface\
