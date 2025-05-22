@@ -5,8 +5,8 @@
 #SBATCH --ntasks-per-node=1          # 1 tasks per node
 #SBATCH --time=24:00:00                 # time limits: 1 hour
 #SBATCH --partition=boost_usr_prod   # partition name
-#SBATCH --error=sampling_ddpm.err       # standard error file
-#SBATCH --output=sampling_ddpm.out      # standard output file
+#SBATCH --error=sampling_all.err       # standard error file
+#SBATCH --output=sampling_all.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
 python -m intraoperative_us.diffusion.tools.sample_cond_ldm_hugginface\
