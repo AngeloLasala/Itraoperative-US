@@ -85,7 +85,7 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
                       autoencoder_model_config['z_channels'],
                       im_size_h,
                       im_size_w)).to(device)
-        test_tokenized_captions = tokenize_captions(xt.shape[0]).to(device)
+        test_tokenized_captions = tokenize_captions(prompt, xt.shape[0]).to(device)
         with torch.no_grad():
             text_embeddings = text_encoder(test_tokenized_captions)[0]
         
