@@ -249,7 +249,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, generated_mas
     #####################################
 
     ######### Create output directories #############
-    save_folder = os.path.join(model_dir, f'w_{guide_w}_all', diffusion_config['scheduler'], f'samples_ep_{epoch}')
+    save_folder = os.path.join(model_dir, f'w_{guide_w}', diffusion_config['scheduler'], f'samples_ep_{epoch}')
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
         mask_folder = os.path.join(save_folder, 'masks')
