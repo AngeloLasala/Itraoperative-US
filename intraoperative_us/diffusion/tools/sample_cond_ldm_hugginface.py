@@ -57,8 +57,10 @@ def sample(model, scheduler, train_config, diffusion_model_config, condition_con
         condition_types = condition_config['condition_types']
     logging.info(f"DIMENSION OF THE LATENT SPACE: {autoencoder_model_config['z_channels']}")
 
-    def tokenize_captions(current_batch_size):
-        captions = [""] * current_batch_size
+    prompt = diffusion_model_config['prompt']
+    logging.info(f'Prompt: {prompt}')
+    def tokenize_captions(prompt, current_batch_size):
+        captions = [prompt] * current_batch_size
         inputs = tokenizer(
             captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
         )
