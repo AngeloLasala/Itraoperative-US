@@ -59,7 +59,7 @@ python -m intraoperative_us.diffusion.tools.sample_cond_ldm_hugginface\
         --trial VAE_finetuning\
         --split 'split_4'\
         --experiment cond_ldm_finetuning\
-        --epoch 6000\
+        --epoch 5000\
         --guide_w 3.0\
         --scheduler 'ddpm'\
         --num_sample_timesteps 1000\
