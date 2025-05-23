@@ -51,7 +51,7 @@ python -m intraoperative_us.diffusion.tools.sample_cond_ldm_hugginface\
         --epoch 5000\
         --guide_w 3.0\
         --scheduler 'ddpm'\
-        --num_sample_timesteps 1000\        
+        --num_sample_timesteps 1000\
 
 python -m intraoperative_us.diffusion.tools.sample_cond_ldm_hugginface\
         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
