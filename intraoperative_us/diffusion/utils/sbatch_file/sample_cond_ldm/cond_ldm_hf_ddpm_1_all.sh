@@ -9,16 +9,6 @@
 #SBATCH --output=sampling_all.out      # standard output file
 #SBATCH --account=IscrC_AIM-ORAL     # account name
 
-python -m intraoperative_us.diffusion.tools.sample_cond_ldm_hugginface\
-        --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
-        --generated_mask_dir "/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion/mask/split_0/uncond_ldm/w_-1.1/ddpm/samples_ep_3000"\
-        --trial VAE_finetuning\
-        --split 'split_0'\
-        --experiment cond_ldm_finetuning\
-        --epoch 5000\
-        --guide_w 3.0\
-        --scheduler 'ddpm'\
-        --num_sample_timesteps 1000\
 
 python -m intraoperative_us.diffusion.tools.sample_cond_ldm_hugginface\
         --save_folder '/leonardo_work/IscrC_AIM-ORAL/Angelo/trained_model/ius_diffusion'\
