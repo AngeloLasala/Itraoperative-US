@@ -92,7 +92,7 @@ def load_dataset(dataset_config):
                                    size=[dataset_config['im_size_h'], dataset_config['im_size_w']], 
                                    input_channels=dataset_config['im_channels'],
                                    mask=True,
-                                   num_of_images=len(data),
+                                   num_of_images=len(data) * dataset_config['degrees_of_augmentation'],
                                    data_augmentation=True,
                                    task='segmentation')
         ## concatenate the two datasets

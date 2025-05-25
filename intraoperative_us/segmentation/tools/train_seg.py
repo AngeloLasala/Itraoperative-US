@@ -74,7 +74,8 @@ def train(conf, save_folder, trial_name=None):
     
     # generate save folder
     save_dir = os.path.join(save_folder)
-    trial_name = os.path.join(trial_name, f"split_{dataset_config['splitting_json'].split('.')[0].split('_')[-1]}", dataset_config['dataset_type'])
+    trial_name = os.path.join(trial_name, f"split_{dataset_config['splitting_json'].split('.')[0].split('_')[-1]}", 
+                                          f"{dataset_config['dataset_type']}_x{dataset_config['degrees_of_augmentation']}")
     if not os.path.exists(save_dir):
         if trial_name is not None:
             save_dir = os.path.join(save_dir, trial_name,  'model')
