@@ -1,0 +1,55 @@
+dataset_params:
+  # parent directory of the dataset
+  # local path: 
+  #            1) "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"
+  #            2) cineca: '/leonardo_work/IscrC_AIM-ORAL/Angelo/ius_data/dataset'
+  dataset_path: "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"  
+  im_channels : 1
+  im_size_h : 256         # 256
+  im_size_w : 256         # 256 
+  splitting_seed: 42      # sedd for set reprodicitbilityin random splitting
+  train_percentage: 0.8              # percentage of the dataset used for training
+  val_percentage: 0.1                # percentage of the dataset used for validation
+  test_percentage: 0.1               # percentage of the dataset used for testing
+  splitting_json: "splitting_1.json"   # FOR REPRODUCIBILITY: name of the json file containing the splitting
+  condition_config:
+    condition_types: ['image']
+
+  ## Augumentation experiment
+  # 'only_real'          -> only real images
+  # 'only_gen'     -> only generated images
+  # 'real_and_gen' -> both real and generated images
+  dataset_type: 'real_and_gen'
+  degrees_of_augmentation: 2     # number of degrees of augmentation
+  par_dir: "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/trained_model/ius"
+  trial: VAE_finetuning
+  split: split_1 
+  experiment: cond_ldm_finetuning
+  guide_w: 3.0_all
+  scheduler: ddpm
+  epoch: 6000
+
+
+model_params:
+  model_type: 'unet_up'
+
+train_params:
+  batch_size: 16
+  epochs : 150
+  learning_rate: 0.001
+  ## 0. < alpha < 1.0 ##
+  # aplha = 0.1 0.2 -> 10% of the loss is from the BCE
+  # alpha = -1.0    -> no weighting
+  alpha: -1.0          
+  ## gamma > 0 focal loss,
+  ## gamma = 2.0 default for Focal Loss
+  #gamma = 0 and alpha = -1.0 for CE 
+  gamma: 0.0
+  ## True -> use dynamic alpha ##
+  # weight proportional to the inverse of frequency
+  # False -> use alpha value
+  # True  -> use dynamic alpha and deactivate alpha  
+  dynamic_alpha: False
+  dice_weight: 0.0
+  focal_weight: 1.0
+  reduction: 'mean'
