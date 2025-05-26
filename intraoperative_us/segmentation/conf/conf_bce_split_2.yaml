@@ -34,8 +34,8 @@ model_params:
   model_type: 'unet_up'
 
 train_params:
-  batch_size: 16
-  epochs : 200
+  batch_size: 14
+  epochs : 150
   learning_rate: 0.001
   ## 0. < alpha < 1.0 ##
   # aplha = 0.1 0.2 -> 10% of the loss is from the BCE
