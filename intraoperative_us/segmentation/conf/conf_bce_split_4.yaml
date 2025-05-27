@@ -20,7 +20,7 @@ dataset_params:
   # 'only_gen'     -> only generated images
   # 'real_and_gen' -> both real and generated images
   dataset_type: 'real_and_gen'
-  degrees_of_augmentation: 2     # number of degrees of augmentation
+  degrees_of_augmentation: 3     # number of degrees of augmentation
   par_dir: "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/trained_model/ius"
   trial: VAE_finetuning
   split: split_4
@@ -35,7 +35,7 @@ model_params:
 
 train_params:
   batch_size: 12
-  epochs : 150
+  epochs : 100
   learning_rate: 0.001
   ## 0. < alpha < 1.0 ##
   # aplha = 0.1 0.2 -> 10% of the loss is from the BCE
