@@ -52,9 +52,9 @@ def linear_fit_with_ci(x, y, label):
     t_ci_intercept = t_value * se_intercept
 
     # Print equation and confidence intervals
-    logging.info(f'{label} Linear Equation: y = {slope:.2f}x + {intercept:.2f} -- R^2: {r_squared:.2f}')
-    logging.info(f'{label} 95% Confidence Interval for Slope: ({slope - t_ci_slope:.2f}, {slope + t_ci_slope:.2f})')
-    logging.info(f'{label} 95% Confidence Interval for Intercept: ({intercept - t_ci_intercept:.2f}, {intercept + t_ci_intercept:.2f})')
+    logging.info(f'{label} Linear Equation: y = {slope:.4f}x + {intercept:.4f} -- R^2: {r_squared:.4f}')
+    logging.info(f'{label} 95% Confidence Interval for Slope: ({slope - t_ci_slope:.4f}, {slope + t_ci_slope:.4f})')
+    logging.info(f'{label} 95% Confidence Interval for Intercept: ({intercept - t_ci_intercept:.4f}, {intercept + t_ci_intercept:.4f})')
 
     return slope, t_ci_slope, intercept, t_ci_intercept, r_squared
 
@@ -74,9 +74,8 @@ def fft_descriptor(mask, n_points=100, show_plot=False):
         print("Warning: No contours found in the mask.")
         return None, None  # Or return default values
 
-    contour = max(contours, key=cv2.contourArea)  # Take largest contour
-    contour_points = contour.squeeze()
-
+    contour_points = np.vstack([c.squeeze() for c in contours if c.squeeze().ndim == 2])
+    
     # Sample 100 points uniformly
     if len(contour_points) < n_points:
         sampled_points = contour_points
@@ -220,6 +219,10 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
             real_masks.append([i, j, z])
     real_masks = np.array(real_masks)
     slope_real, t_ci_slope_real, intercept_real, t_ci_intercept_real,  r_squared_real = linear_fit_with_ci(np.log(real_masks[:,0]), np.log(real_masks[:,2]), 'Train data')
+    logging.info(f'len real data {len(real_masks)}')
+    logging.info(f'Linear fit for REAL DATA: slope={slope_real:.4f}, intercept={intercept_real:.4f}, R^2={r_squared_real:.4f}')
+    logging.info(f'95% CI for slope: ({slope_real - t_ci_slope_real:.4f}, {slope_real + t_ci_slope_real:.4f})')
+    logging.info(f'95% CI for intercept: ({intercept_real - t_ci_intercept_real:.4f}, {intercept_real + t_ci_intercept_real:.4f})')
 
 
     ## ANALYSIS OVER EPOCHS - GENERATED TUMOR MASK

@@ -17,6 +17,8 @@ import re
 from nnunetv2.paths import nnUNet_raw, nnUNet_preprocessed, nnUNet_results
 from nnunetv2.dataset_conversion.generate_dataset_json import generate_dataset_json
 
+from intraoperative_us.segmentation.dataset.create_nnUnet_dataset import extract_case_number, extract_slice_number
+
 def get_dataset_name_from_number(d):
     """
     Get the dataset name from the dataset number
@@ -30,22 +32,41 @@ def get_dataset_name_from_number(d):
         else:
             raise ValueError(f"Dataset {d} not found in nnUNet_preprocessed folder. Available datasets: {dataset_list}")
 
+def filter_cases_by_ids(filenames, case_ids):
+    """
+    Filter filenames to include only those that start with specified case IDs.
+    """
+    prefixes = [f"Case{case_id:03d}_" for case_id in case_ids]
+    return [filename.replace('_0000.png', '') for filename in filenames if any(filename.startswith(prefix) for prefix in prefixes)]
+
+
 def main(args):
     """
     Create the json for splitting
     """
     dataset_name = get_dataset_name_from_number(args.d)
-    print(dataset_name)
-    exit()
+
+    list_dataset_raw = os.listdir(os.path.join(nnUNet_raw, dataset_name, 'imagesTr'))
 
     # read the json file with splitting
+    split_json_list = []
     for split in [0, 1, 2, 3, 4]:
+        split_json = {}
         json_path = os.path.join(args.dataset_path, f'splitting_{split}.json')
         with open(json_path, 'r') as f:
             split_data = json.load(f)
 
-        print(split_data.keys())
-        print()
+        train_sbj = [extract_case_number(i) for i in split_data['train']]
+        val_sbj = [extract_case_number(i) for i in split_data['val']]
+        
+        train_sbj_list = filter_cases_by_ids(list_dataset_raw, train_sbj)
+        val_sbj_list = filter_cases_by_ids(list_dataset_raw, val_sbj)
+        split_json['train'] = train_sbj_list
+        split_json['val'] = val_sbj_list
+        split_json_list.append(split_json)
+    ## save the list with json
+    with open(os.path.join(nnUNet_preprocessed, dataset_name, 'splits_final.json'), 'w') as f:
+        json.dump(split_json_list, f, indent=4)
 
 
 if __name__ == "__main__":
