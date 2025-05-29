@@ -5,18 +5,21 @@ export nnUNet_preprocessed="/media/angelo/OS/Users/lasal/OneDrive - Scuola Super
 export nnUNet_results="/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/trained_model/nnUNet_results"
 
 # create dataset Real Real_Gex_x#numeber
-# python -m intraoperative_us.segmentation.dataset.create_nnUnet_dataset
+# python -m intraoperative_us.segmentation.dataset.create_nnUnet_dataset --save_folder "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/trained_model/"\
+#                                                                        --name_dataset "RealGenx2" \
+#                                                                        --trial 'VAE_finetuning' \
+#                                                                        --experiment cond_ldm_finetuning
 
 # # analyse raw data
-# nnUNetv2_plan_and_preprocess -d 1 --verify_dataset_integrity
+# nnUNetv2_plan_and_preprocess -d 2 --verify_dataset_integrity
 
 # create split
-# python -m intraoperative_us.segmentation.dataset.create_nnUnet_split -d 1
+python -m intraoperative_us.segmentation.dataset.create_nnUnet_split -d 2
 
 # # train the model
-for split in 0 1 2 3 4 ; do
-    nnUNetv2_train 1 2d $split -device cuda
-done
+# for split in 0 1 2 3 4 ; do
+#     nnUNetv2_train 1 2d $split -device cuda
+# done
 
 # best configuration
 # nnUNetv2_find_best_configuration 1

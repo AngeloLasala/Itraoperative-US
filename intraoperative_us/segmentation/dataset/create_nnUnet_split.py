@@ -26,11 +26,15 @@ def get_dataset_name_from_number(d):
     # get the list of dataset in nnUNet_preprocessed
     dataset_list = os.listdir(nnUNet_preprocessed)
     # find the string in the list that sart with 'Dataset001'
+    dataset_return = None
     for dataset in dataset_list:
         if dataset.startswith(f'Dataset{d:03d}_'):
-            return dataset
-        else:
-            raise ValueError(f"Dataset {d} not found in nnUNet_preprocessed folder. Available datasets: {dataset_list}")
+            dataset_return = dataset
+
+    if dataset_return is None:
+        raise ValueError(f"Dataset {d} not found in {nnUNet_preprocessed}")
+
+    return dataset_return
 
 def filter_cases_by_ids(filenames, case_ids):
     """
@@ -39,6 +43,11 @@ def filter_cases_by_ids(filenames, case_ids):
     prefixes = [f"Case{case_id:03d}_" for case_id in case_ids]
     return [filename.replace('_0000.png', '') for filename in filenames if any(filename.startswith(prefix) for prefix in prefixes)]
 
+def filter_casesG_by_split(filenames, split):
+    """
+    Filter filenames to include only those that start with specified split.
+    """
+    return [filename.replace('_0000.png', '') for filename in filenames if filename.startswith(f'CaseG{split}')]
 
 def main(args):
     """
@@ -58,12 +67,18 @@ def main(args):
 
         train_sbj = [extract_case_number(i) for i in split_data['train']]
         val_sbj = [extract_case_number(i) for i in split_data['val']]
-        
+
         train_sbj_list = filter_cases_by_ids(list_dataset_raw, train_sbj)
         val_sbj_list = filter_cases_by_ids(list_dataset_raw, val_sbj)
+        
         split_json['train'] = train_sbj_list
         split_json['val'] = val_sbj_list
         split_json_list.append(split_json)
+
+        if dataset_name != 'Dataset001_Real':
+            train_sbj_list_gen = filter_casesG_by_split(list_dataset_raw, split)
+            split_json['train'] += train_sbj_list_gen
+            
     ## save the list with json
     with open(os.path.join(nnUNet_preprocessed, dataset_name, 'splits_final.json'), 'w') as f:
         json.dump(split_json_list, f, indent=4)
