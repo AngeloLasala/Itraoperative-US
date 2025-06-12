@@ -1,0 +1,122 @@
+QUANTITATIVE EVALUATION MASK
+=========================================================================
+split_0
+TUMOUR SIZE
+REAL DATA: mean=0.1150, std=0.0582, min=0.0029, max=0.2736
+         : median=0.1158, 1-quantile=0.0662, 3-quantile=0.1557 range= 0.09
+GEN DATA: mean=0.1147, std=0.0501, min=0.0046, max=0.2428
+         : median=0.1176, 1-quantile=0.0792, 3-quantile=0.1509 range=0.07
+Wilcoxon test: statistic=-0.3776, p-value=0.7058
+
+ESD
+REAL DATA: mean=64169.0543, std=49142.9588, min=170.3632, max=215474.7412
+         : median=50901.8553, 1-quantile=28988.3222, 3-quantile=92437.1632 range=6.34
+GEN DATA: mean=70252.0202, std=61190.7804, min=470.3476, max=389743.5118
+         : median=55014.5452, 1-quantile=27253.2003, 3-quantile=102250.6923 range=7.49
+Wilcoxon test: statistic=-0.5759, p-value=0.5647
+
+INFO:root:len gen data 353
+INFO:root:Gen data Linear Equation: y = 1.0318x + 13.1062 -- R^2: 0.3458
+INFO:root:Gen data 95% Confidence Interval for Slope: (0.8828, 1.1808)
+INFO:root:Gen data 95% Confidence Interval for Intercept: (12.7508, 13.4617)
+INFO:root:Gen data Slope p-value: 0.0000
+INFO:root:Statistical t test: H0: slope_gen = slope_real
+INFO:root:Slope t-statistic split_0-3000: 0.8373, p-value: 0.4027
+=========================================================================
+
+=========================================================================
+split_1
+TUMOUR SIZE
+REAL DATA: mean=0.1249, std=0.0632, min=0.0172, max=0.2863        
+         : median=0.1188, 1-quantile=0.0715, 3-quantile=0.1628   range=0.09
+GEN DATA: mean=0.1271, std=0.0649, min=0.0123, max=0.3119
+         : median=0.1169, 1-quantile=0.0782, 3-quantile=0.1726  range=0.09
+Wilcoxon test: statistic=-0.3297, p-value=0.7417
+
+ESD
+REAL DATA: mean=73862.3820, std=68898.6420, min=1816.6391, max=466053.4891
+         : median=52719.1463, 1-quantile=31676.5940, 3-quantile=94760.1431 range=6.31
+GEN DATA: mean=68271.0925, std=78128.0129, min=2510.2293, max=740261.4726
+         : median=47981.4878, 1-quantile=25972.9129, 3-quantile=81501.0247 range=5.55
+Wilcoxon test: statistic=1.9386, p-value=0.0526
+
+INFO:root:Gen data Linear Equation: y = 0.8540x + 12.5875 -- R^2: 0.2662
+INFO:root:Gen data 95% Confidence Interval for Slope: (0.7053, 1.0026)
+INFO:root:Gen data 95% Confidence Interval for Intercept: (12.2470, 12.9279)
+INFO:root:Gen data Slope p-value: 0.0000
+INFO:root:Statistical t test: H0: slope_gen = slope_real
+INFO:root:Slope t-statistic split_1-3000: 1.0060, p-value: 0.3147
+=========================================================================
+
+=========================================================================
+split_2
+TUMOUR SIZE
+REAL DATA: mean=0.1175, std=0.0669, min=0.0029, max=0.2863
+         : median=0.1041, 1-quantile=0.0654, 3-quantile=0.1555 range=0.09
+GEN DATA: mean=0.1264, std=0.0627, min=0.0233, max=0.3037
+         : median=0.1152, 1-quantile=0.0750, 3-quantile=0.1658  range=0.09
+Wilcoxon test: statistic=-2.0008, p-value=0.0454
+
+ESD
+REAL DATA: mean=74110.6820, std=70827.3921, min=170.3632, max=466053.4891
+         : median=52805.7979, 1-quantile=28448.0349, 3-quantile=99646.5000 range=7.11
+GEN DATA: mean=76059.4770, std=85248.1904, min=1920.2438, max=688000.2002
+         : median=51931.6703, 1-quantile=28401.3871, 3-quantile=94964.6463 range=6.56
+Wilcoxon test: statistic=0.3084, p-value=0.7577
+
+INFO:root:Gen data Linear Equation: y = 0.9540x + 12.8973 -- R^2: 0.2744
+INFO:root:Gen data 95% Confidence Interval for Slope: (0.7892, 1.1188)
+INFO:root:Gen data 95% Confidence Interval for Intercept: (12.5237, 13.2709)
+INFO:root:Gen data Slope p-value: 0.0000
+INFO:root:Statistical t test: H0: slope_gen = slope_real
+INFO:root:Slope t-statistic split_2-3000: -0.9832, p-value: 0.3258
+=========================================================================
+
+=========================================================================
+split_3
+TUMOUR SIZE
+REAL DATA: mean=0.1247, std=0.0661, min=0.0029, max=0.2863
+         : median=0.1215, 1-quantile=0.0740, 3-quantile=0.1641   range =.09
+GEN DATA: mean=0.1232, std=0.0623, min=0.0050, max=0.2917
+         : median=0.1205, 1-quantile=0.0785, 3-quantile=0.1638  range= 0.08
+Wilcoxon test: statistic=0.0146, p-value=0.9884
+
+ESD
+REAL DATA: mean=70296.1570, std=70810.9432, min=170.3632, max=466053.4891
+         : median=47497.6872, 1-quantile=27112.9391, 3-quantile=90423.4338 range=6.33
+GEN DATA: mean=59544.4944, std=56353.4243, min=206.1986, max=342763.0546
+         : median=41075.1313, 1-quantile=20008.9687, 3-quantile=81209.5704 range=6.12
+Wilcoxon test: statistic=2.0858, p-value=0.0370
+
+INFO:root:Gen data Linear Equation: y = 1.1161x + 13.0302 -- R^2: 0.4371
+INFO:root:Gen data 95% Confidence Interval for Slope: (0.9814, 1.2508)
+INFO:root:Gen data 95% Confidence Interval for Intercept: (12.7082, 13.3522)
+INFO:root:Gen data Slope p-value: 0.0000
+INFO:root:Statistical t test: H0: slope_gen = slope_real
+INFO:root:Slope t-statistic split_3-1000: 0.6612, p-value: 0.5087
+
+=========================================================================
+
+=========================================================================
+split_4
+TUMOUR SIZE
+REAL DATA: mean=0.1186, std=0.0595, min=0.0029, max=0.2863
+         : median=0.1160, 1-quantile=0.0733, 3-quantile=0.1557 range=0.08
+GEN DATA: mean=0.1186, std=0.0540, min=0.0075, max=0.3017
+         : median=0.1200, 1-quantile=0.0804, 3-quantile=0.1498
+Wilcoxon test: statistic=-0.2720, p-value=0.7857
+
+ESD
+REAL DATA: mean=75161.6319, std=70348.4803, min=170.3632, max=466053.4891
+         : median=55838.5926, 1-quantile=29473.3912, 3-quantile=102101.3575 range=7.26
+GEN DATA: mean=80005.5495, std=73132.4793, min=638.7755, max=454717.8666
+         : median=56675.2607, 1-quantile=29261.9755, 3-quantile=108377.5189 range=7.91
+Wilcoxon test: statistic=-0.7708, p-value=0.4408
+
+INFO:root:Gen data Linear Equation: y = 0.9622x + 13.0683 -- R^2: 0.3204
+INFO:root:Gen data 95% Confidence Interval for Slope: (0.8144, 1.1099)
+INFO:root:Gen data 95% Confidence Interval for Intercept: (12.7230, 13.4137)
+INFO:root:Gen data Slope p-value: 0.0000
+INFO:root:Statistical t test: H0: slope_gen = slope_real
+INFO:root:Slope t-statistic split_4-1500: -2.0260, p-value: 0.0431
+=========================================================================

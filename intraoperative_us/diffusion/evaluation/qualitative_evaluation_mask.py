@@ -16,6 +16,7 @@ from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import scipy.stats as stats
+import matplotlib.ticker as mticker
 
 from intraoperative_us.diffusion.evaluation.investigate_vae import get_config_value
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS_mask, GeneratedMaskDataset
@@ -51,12 +52,17 @@ def linear_fit_with_ci(x, y, label):
     t_ci_slope = t_value * se_slope
     t_ci_intercept = t_value * se_intercept
 
+    # Statistical test for slope (H0: slope = 0)
+    t_stat_slope = slope / se_slope
+    p_value_slope = 2 * (1 - stats.t.cdf(abs(t_stat_slope), df=n-2))
+
     # Print equation and confidence intervals
     logging.info(f'{label} Linear Equation: y = {slope:.4f}x + {intercept:.4f} -- R^2: {r_squared:.4f}')
     logging.info(f'{label} 95% Confidence Interval for Slope: ({slope - t_ci_slope:.4f}, {slope + t_ci_slope:.4f})')
     logging.info(f'{label} 95% Confidence Interval for Intercept: ({intercept - t_ci_intercept:.4f}, {intercept + t_ci_intercept:.4f})')
+    logging.info(f'{label} Slope p-value: {p_value_slope:.4f}')
 
-    return slope, t_ci_slope, intercept, t_ci_intercept, r_squared
+    return slope, t_ci_slope, intercept, t_ci_intercept, r_squared, se_slope, se_intercept
 
 def fft_descriptor(mask, n_points=100, show_plot=False):
     """
@@ -218,7 +224,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
         if j is not None and z is not None and i is not None:
             real_masks.append([i, j, z])
     real_masks = np.array(real_masks)
-    slope_real, t_ci_slope_real, intercept_real, t_ci_intercept_real,  r_squared_real = linear_fit_with_ci(np.log(real_masks[:,0]), np.log(real_masks[:,2]), 'Train data')
+    slope_real, t_ci_slope_real, intercept_real, t_ci_intercept_real,  r_squared_real, se_slope_real, se_intercept_real = linear_fit_with_ci(np.log(real_masks[:,0]), np.log(real_masks[:,2]), 'Train data')
     logging.info(f'len real data {len(real_masks)}')
     logging.info(f'Linear fit for REAL DATA: slope={slope_real:.4f}, intercept={intercept_real:.4f}, R^2={r_squared_real:.4f}')
     logging.info(f'95% CI for slope: ({slope_real - t_ci_slope_real:.4f}, {slope_real + t_ci_slope_real:.4f})')
@@ -245,23 +251,28 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
         ep_dict['gen_mask'] = gen_masks
 
         gen_masks = np.array(gen_masks)
-        slope_gen, t_ci_slope_gen, intercept_gen, t_ci_intercept_gen, r_squared_gen = linear_fit_with_ci(np.log(gen_masks[:,0]), np.log(gen_masks[:,2]), 'Gen data')
+        slope_gen, t_ci_slope_gen, intercept_gen, t_ci_intercept_gen, r_squared_gen, se_slope_gen, se_intercept_gen = linear_fit_with_ci(np.log(gen_masks[:,0]), np.log(gen_masks[:,2]), 'Gen data')
         ep_dict['linear_fit'] = [slope_gen, t_ci_slope_gen, intercept_gen, t_ci_intercept_gen, r_squared_gen]
         epochs_dict[ep] = ep_dict
+
+        logging.info('Statistical t test: H0: slope_gen = slope_real')
+        t_stat_slope = (slope_gen - slope_real) / np.sqrt(se_slope_gen**2 + se_slope_real**2)
+        p_value_slope = 2 * (1 - stats.t.cdf(abs(t_stat_slope), df=len(gen_masks)+len(real_masks)-4))
+        logging.info(f'Slope t-statistic {trial}-{ep}: {t_stat_slope:.4f}, p-value: {p_value_slope:.4f}')
 
     ## Quantitative analisys
     keys_list = list(epochs_dict.keys())
 
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20,10), num=f'Quantitative analysis', tight_layout=True)
-    ax[0].axhline(y=slope_real, color='blue', linestyle='-', lw=3, label='Train data')
-    ax[0].fill_between([keys_list[0], keys_list[-1]], slope_real - t_ci_slope_real, slope_real + t_ci_slope_real, color='blue', alpha=0.1)
+    ax[0].axhline(y=slope_real, color='orchid', linestyle='-', lw=3, label='Train data')
+    ax[0].fill_between([keys_list[0], keys_list[-1]], slope_real - t_ci_slope_real, slope_real + t_ci_slope_real, color='orchid', alpha=0.1)
     ax[0].set_xlabel('Epochs', fontsize=30)
     ax[0].set_ylabel('Slope', fontsize=30)
     ax[0].tick_params(axis='both', which='major', labelsize=30)
     ax[0].grid(linestyle=':')
 
-    ax[1].axhline(y=intercept_real, color='blue', linestyle='-', lw=3, label='Train data')
-    ax[1].fill_between([keys_list[0], keys_list[-1]], intercept_real - t_ci_intercept_real, intercept_real + t_ci_intercept_real, color='blue', alpha=0.1)
+    ax[1].axhline(y=intercept_real, color='orchid', linestyle='-', lw=3, label='Train data')
+    ax[1].fill_between([keys_list[0], keys_list[-1]], intercept_real - t_ci_intercept_real, intercept_real + t_ci_intercept_real, color='orchid', alpha=0.1)
     ax[1].set_xlabel('Epochs', fontsize=30)
     ax[1].set_ylabel('Intercept', fontsize=30)
     ax[1].tick_params(axis='both', which='major', labelsize=30)
@@ -272,38 +283,74 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
     intercept_list = [epochs_dict[ep]['linear_fit'][2] for ep in epochs_dict.keys()]
     slope_ci_list = [epochs_dict[ep]['linear_fit'][1] for ep in epochs_dict.keys()]
     intercept_ci_list = [epochs_dict[ep]['linear_fit'][3] for ep in epochs_dict.keys()]
-    ax[0].plot(keys_list, slope_list, c='lightgreen', lw=3, ls='--', marker='o', ms=30, label='Gen data')
-    ax[0].fill_between(keys_list, np.array(slope_list) - np.array(slope_ci_list), np.array(slope_list) + np.array(slope_ci_list), color='lightgreen', alpha=0.1)
+    ax[0].plot(keys_list, slope_list, c='forestgreen', lw=3, ls='--', marker='o', ms=30, label='Gen data')
+    ax[0].fill_between(keys_list, np.array(slope_list) - np.array(slope_ci_list), np.array(slope_list) + np.array(slope_ci_list), color='forestgreen', alpha=0.1)
     ax[0].legend(fontsize=30)
-    ax[1].plot(keys_list, intercept_list, c='lightgreen', lw=3, ls='--',  marker='o', ms=30, label='Gen data')
-    ax[1].fill_between(keys_list, np.array(intercept_list) - np.array(intercept_ci_list), np.array(intercept_list) + np.array(intercept_ci_list), color='lightgreen', alpha=0.1)
+    ax[1].plot(keys_list, intercept_list, c='forestgreen', lw=3, ls='--',  marker='o', ms=30, label='Gen data')
+    ax[1].fill_between(keys_list, np.array(intercept_list) - np.array(intercept_ci_list), np.array(intercept_list) + np.array(intercept_ci_list), color='forestgreen', alpha=0.1)
     ax[1].legend(fontsize=30)
     ######################## PLOT #################################################################
     gen_masks = np.array(epochs_dict[epoch]['gen_mask'])
     
     ## plt the 2d scatter plot of tsne
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20,10), num=f'MASK plots {epoch}', tight_layout=True)
+    fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(24,8), num=f'MASK plots {epoch} - {trial}', tight_layout=True)
     bins = np.histogram_bin_edges(np.concatenate([real_masks[:,0], gen_masks[:,0]]), bins='auto')
-    stat, p = stats.ranksums(real_masks[:,0], gen_masks[:,0])
+    stat_m, p_m = stats.ranksums(real_masks[:,0], gen_masks[:,0])
     ## print the logging in the legend
-    ax[0].hist(real_masks[:,0], bins=bins, color='blue', label=f'Wilcoxon p-value={p:.4f}', alpha=0.5)
-    ax[0].hist(gen_masks[:,0],  bins=bins, color='lightgreen', label='Gen data', alpha=0.5)
+    ax[0].hist(real_masks[:,0], bins=bins, color='orchid', label=f'Real data', alpha=0.5)
+    ax[0].hist(gen_masks[:,0],  bins=bins, color='forestgreen', label='Gen data', alpha=0.5)
     ax[0].set_xlabel('Tumor size', fontsize=30)
+    ax[0].set_ylabel('Count', fontsize=30)
     ax[0].tick_params(axis='both', which='major', labelsize=30)
     ax[0].legend(fontsize=24)
     ax[0].grid(linestyle=':')
 
-    ax[1].scatter(real_masks[:,0], real_masks[:,2], c='blue', label='Train data', s=100, alpha=0.6)
-    ax[1].scatter(gen_masks[:,0], gen_masks[:,2], c='lightgreen', label='Gen data', s=100, alpha=0.6)
-    ax[1].plot(real_masks[:,0], np.exp(slope_real * np.log(real_masks[:,0]) + intercept_real), c='blue', ls='-',  lw=3, label='Fit train data')
-    ax[1].plot(gen_masks[:,0], np.exp(slope_gen * np.log(gen_masks[:,0]) + intercept_gen), c='lightgreen', ls='-', lw=3, label='Fit gen data')
-    ax[1].set_yscale('log')
-    ax[1].set_xscale('log')
-    ax[1].set_xlabel('Tumor size', fontsize=30)
-    ax[1].set_ylabel('E(PSD)', fontsize=30)
+    bins = np.histogram_bin_edges(np.concatenate([real_masks[:,2], gen_masks[:,2]]), bins='auto')
+    stat_e, p_e = stats.ranksums(real_masks[:,2], gen_masks[:,2])
+    ## print the logging in the legend
+    ax[1].hist(real_masks[:,2], bins=bins, color='orchid', label='Real', alpha=0.5)
+    ax[1].hist(gen_masks[:,2],  bins=bins, color='forestgreen', label='Gen data', alpha=0.5)
+    ax[1].set_xlabel('ESP', fontsize=30)
+    ax[1].set_ylabel('Count', fontsize=30)
     ax[1].tick_params(axis='both', which='major', labelsize=30)
     ax[1].legend(fontsize=24)
     ax[1].grid(linestyle=':')
+
+    formatter = mticker.ScalarFormatter(useMathText=True)
+    formatter.set_powerlimits((0, 0)) 
+    ax[1].xaxis.set_major_formatter(formatter)
+    ax[1].xaxis.get_offset_text().set_fontsize(30)
+    ax[1].tick_params(axis='x', which='major', labelsize=30)
+
+    ax[2].scatter(real_masks[:,0], real_masks[:,2], c='orchid', label='Train data', s=100, alpha=0.4)
+    ax[2].scatter(gen_masks[:,0], gen_masks[:,2], c='forestgreen', label='Gen data', s=100, alpha=0.4)
+    ax[2].plot(real_masks[:,0], np.exp(slope_real * np.log(real_masks[:,0]) + intercept_real), c='orchid', ls='-',  lw=3, label='Fit train data')
+    ax[2].plot(gen_masks[:,0], np.exp(slope_gen * np.log(gen_masks[:,0]) + intercept_gen), c='forestgreen', ls='-', lw=3, label='Fit gen data')
+    ax[2].set_yscale('log')
+    ax[2].set_xscale('log')
+    ax[2].set_xlabel('Tumor size', fontsize=30)
+    ax[2].set_ylabel('ESP', fontsize=30)
+    ax[2].tick_params(axis='both', which='major', labelsize=30)
+    ax[2].legend(fontsize=24)
+    ax[2].grid(linestyle=':')
+
+    ## Print statistical distribution
+    print('=========================================================================')
+    print(trial)
+    print('TUMOUR SIZE')
+    print(f'REAL DATA: mean={np.mean(real_masks[:,0]):.4f}, std={np.std(real_masks[:,0]):.4f}, min={np.min(real_masks[:,0]):.4f}, max={np.max(real_masks[:,0]):.4f}')
+    print(f'         : median={np.median(real_masks[:,0]):.4f}, 1-quantile={np.quantile(real_masks[:,0], 0.25):.4f}, 3-quantile={np.quantile(real_masks[:,0], 0.75):.4f}')
+    print(f'GEN DATA: mean={np.mean(gen_masks[:,0]):.4f}, std={np.std(gen_masks[:,0]):.4f}, min={np.min(gen_masks[:,0]):.4f}, max={np.max(gen_masks[:,0]):.4f}')
+    print(f'         : median={np.median(gen_masks[:,0]):.4f}, 1-quantile={np.quantile(gen_masks[:,0], 0.25):.4f}, 3-quantile={np.quantile(gen_masks[:,0], 0.75):.4f}')
+    print(f'Wilcoxon test: statistic={stat_m:.4f}, p-value={p_m:.4f}')
+    print()
+    print('ESD')
+    print(f'REAL DATA: mean={np.mean(real_masks[:,2]):.4f}, std={np.std(real_masks[:,2]):.4f}, min={np.min(real_masks[:,2]):.4f}, max={np.max(real_masks[:,2]):.4f}')
+    print(f'         : median={np.median(real_masks[:,2]):.4f}, 1-quantile={np.quantile(real_masks[:,2], 0.25):.4f}, 3-quantile={np.quantile(real_masks[:,2], 0.75):.4f}')
+    print(f'GEN DATA: mean={np.mean(gen_masks[:,2]):.4f}, std={np.std(gen_masks[:,2]):.4f}, min={np.min(gen_masks[:,2]):.4f}, max={np.max(gen_masks[:,2]):.4f}')
+    print(f'         : median={np.median(gen_masks[:,2]):.4f}, 1-quantile={np.quantile(gen_masks[:,2], 0.25):.4f}, 3-quantile={np.quantile(gen_masks[:,2], 0.75):.4f}') 
+    print(f'Wilcoxon test: statistic={stat_e:.4f}, p-value={p_e:.4f}')
+    print('=========================================================================')
     plt.show()
 
     #################################################################################################
