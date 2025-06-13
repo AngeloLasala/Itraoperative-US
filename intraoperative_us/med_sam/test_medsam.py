@@ -22,12 +22,13 @@ from surface_distance import metrics
 import pandas as pd
 import seaborn as sns
 import cv2
+from matplotlib.patches import Patch
 
 from intraoperative_us.diffusion.evaluation.investigate_vae import get_config_value, get_best_model
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS, GenerateDataset
 from intraoperative_us.diffusion.utils.utils import get_best_model, load_autoencoder, get_number_parameter
 
-def show_mask(mask, ax, color, random_color=False):
+def show_mask(mask, ax, label, color, random_color=False):
     """
     show the mask on the image
     
@@ -46,12 +47,12 @@ def show_mask(mask, ax, color, random_color=False):
         color = np.array(color)
     h, w = mask.shape[-2:]
     mask_image = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
-    ax.imshow(mask_image)
+    ax.imshow(mask_image, label=label)
 
 def show_box(box, ax):
     x0, y0 = box[0], box[1]
     w, h = box[2] - box[0], box[3] - box[1]
-    ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='blue', facecolor=(0,0,0,0), lw=2))
+    ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='darkgreen', facecolor=(0,0,0,0), lw=2))
 
 def get_bbox_from_mask(mask):
     mask_u8 = (mask > 0).astype(np.uint8)
@@ -193,14 +194,24 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler,
             if show_gen_mask:
                 fig, ax = plt.subplots(1, 2, figsize=(10, 5))
                 ax[0].imshow(img, cmap='gray')
-                # show_box(bbox[0], ax[0])
+                for bb in bbox[0]:
+                    show_box(bb, ax[0])
                 ax[0].set_title("Input Image and Bounding Box")
                 ax[0].axis('off')
                 ax[1].imshow(img, cmap='gray')
-                show_mask(medsam_seg, ax[1], color=[65/255, 105/255, 225/255, 0.8])
-                show_mask(mask[0, 0].cpu().numpy(), ax[1], color=[60/255, 179/255, 113/255, 0.4])
-                # show_box(bbox[0], ax[1])
+                
+                show_mask(medsam_seg, ax[1], label='MedSAM mask', color=[138/255, 43/255, 226/255, 0.5])
+                show_mask(mask[0, 0].cpu().numpy(), ax[1], label='mask', color=[60/255, 179/255, 113/255, 0.5])
+                for bb in bbox[0]:
+                    show_box(bb, ax[1])
                 ax[1].axis('off')
+                # Custom legend patches
+                legend_elements = [
+                    Patch(facecolor=[138/255, 43/255, 226/255, 0.5], label='MedSAM mask'),
+                    Patch(facecolor=(60/255, 179/255, 113/255, 0.5), label='mask'),
+                    Patch(facecolor=(0, 0, 0, 0), edgecolor='darkgreen', label='Bounding Box')
+                ]
+                ax[1].legend(handles=legend_elements, loc='upper right', fontsize=12)
                 ax[1].set_title("MedSAM vs Manual Segmentation")
                 plt.show()
 
@@ -248,6 +259,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler,
                 # show_box(bbox[0], ax[1])
                 ax[1].axis('off')
                 ax[1].set_title("MedSAM vs Manual Segmentation")
+                ax[1].legend()
                 plt.show()
 
         real_dsc = np.array(real_dsc)

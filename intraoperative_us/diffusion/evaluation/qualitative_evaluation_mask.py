@@ -68,6 +68,31 @@ def fft_descriptor(mask, n_points=100, show_plot=False):
     """
     Compute the shape context descriptors of the mask
     """
+    # def create_circle_mask(shape=(256, 256), center=None, radius=50):
+    #     """
+    #     Create a binary mask with a white filled circle on a black background.
+
+    #     Parameters:
+    #         shape (tuple): Size of the mask (height, width).
+    #         center (tuple): Center of the circle (x, y). Defaults to image center.
+    #         radius (int): Radius of the circle.
+
+    #     Returns:
+    #         mask (ndarray): Binary mask with a white circle.
+    #     """
+    #     mask = np.zeros(shape, dtype=np.uint8)
+
+    #     if center is None:
+    #         center = (shape[1] // 2, shape[0] // 2)  # (x, y)
+
+    #     cv2.circle(mask, center, radius, color=255, thickness=-1)  # filled circle
+
+    #     return mask
+
+    # # Example usage:
+    # mask = create_circle_mask(shape=(256, 256), radius=30)
+    # mask = np.array(mask, dtype=np.float32)  # Convert to float32 for consistency
+
     ## find the contours of the mask
     # Ensure binary mask is in the correct format (H, W) and uint8
     binary_mask = (mask > 0.5).astype(np.uint8)  # Convert to binary (0 or 1)
@@ -106,32 +131,41 @@ def fft_descriptor(mask, n_points=100, show_plot=False):
     total_power = np.sum(psd)
 
     if show_plot:
-        plt.figure(figsize=(25, 8), tight_layout=True)
-        plt.subplot(1, 3, 1)
-        plt.imshow(mask)
+
+        fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(25, 8), tight_layout=True)
+        ax[0].imshow(mask, cmap='gray', alpha=0.8)
         for i in range(len(sampled_points)):
-            plt.scatter(sampled_points[i,0], sampled_points[i,1], c='r', s=100)
-        plt.scatter(mean_x, mean_y, c='b', s=100)
+            if i == 0:
+                ax[0].scatter(sampled_points[i,0], sampled_points[i,1], c='C3', s=50, label='contour points')
+            else:
+                ax[0].scatter(sampled_points[i,0], sampled_points[i,1], c='C3', s=50)
+        ax[0].scatter(mean_x, mean_y, c='royalblue', s=800, marker='*', label='centroid')
+        ax[0].set_title('Mask with contour points and centroid', fontsize=28)
+        ax[0].legend(fontsize=28)
+        ax[0].axis('off')
+        
+        
+        ax[1].set_title('Distance from centroid', fontsize=26)
+        ax[1].plot(distances , 'C3', lw=6)
+        ax[1].set_xlabel('contourn points', fontsize=28)
+        ax[1].set_ylabel('Distance from centroid '+ r'$(d)$', fontsize=28)
+        ax[1].axhline(y=np.mean(distances), color='C3', linestyle='--', lw=4, label='mean '+r'$(\bar{d})$')
+        ax[1].set_ylim(0,60)
+        ax[1].tick_params(axis='x', labelsize=24)
+        ax[1].tick_params(axis='y', labelsize=24)
+        ax[1].legend(fontsize=26)
+        ax[1].grid(linestyle=':')
 
-        plt.axis('off')
-        plt.subplot(1, 3, 2)
-        plt.title('Distance from centroid', fontsize=26)
-        plt.plot(distances , 'r', lw=6)
-        plt.xlabel('Points', fontsize=20)
-        plt.ylabel('Distance from centroid (D)', fontsize=20)
-        plt.ylim(0,100)
-        plt.xticks(fontsize=20)
-        plt.yticks(fontsize=20)
-        plt.grid()
-
-        plt.subplot(1, 3, 3)
-        plt.title('Power Spectral Density', fontsize=26)
-        plt.plot(xf, psd[:N//2], 'b', lw=6)
-        plt.xlabel('Frequency', fontsize=20)
-        plt.ylabel('|FFT(D-D_mean)|^2', fontsize=20)
-        plt.xticks(fontsize=20)
-        plt.yticks(fontsize=20)
-        plt.grid()
+        ax[2].set_title('Power Spectral Density', fontsize=28)
+        ax[2].plot(xf, psd[:N//2], 'royalblue', lw=6)
+        ax[2].set_xlabel('Frequency (f)', fontsize=26)
+        ax[2].set_ylabel(r'$\mathcal{F}_{f}$'+' '+r'$(|d - \bar{d}|)$', fontsize=28)
+        # fil the area under the curve with a gradient
+        ax[2].fill_between(xf, psd[:N//2], color='royalblue', alpha=0.3, label='ESD')
+        ax[2].tick_params(axis='x', labelsize=24)
+        ax[2].tick_params(axis='y', labelsize=24)
+        ax[2].legend(fontsize=26)
+        ax[2].grid(linestyle=':')
         plt.show()
 
     return distances.mean(), total_power
