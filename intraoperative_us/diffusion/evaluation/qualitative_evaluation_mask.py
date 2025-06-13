@@ -299,7 +299,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
     ## print the logging in the legend
     ax[0].hist(real_masks[:,0], bins=bins, color='orchid', label=f'Real data', alpha=0.5)
     ax[0].hist(gen_masks[:,0],  bins=bins, color='forestgreen', label='Gen data', alpha=0.5)
-    ax[0].set_xlabel('Tumor size', fontsize=30)
+    ax[0].set_xlabel('Tumour size', fontsize=30)
     ax[0].set_ylabel('Count', fontsize=30)
     ax[0].tick_params(axis='both', which='major', labelsize=30)
     ax[0].legend(fontsize=24)
@@ -328,7 +328,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
     ax[2].plot(gen_masks[:,0], np.exp(slope_gen * np.log(gen_masks[:,0]) + intercept_gen), c='forestgreen', ls='-', lw=3, label='Fit gen data')
     ax[2].set_yscale('log')
     ax[2].set_xscale('log')
-    ax[2].set_xlabel('Tumor size', fontsize=30)
+    ax[2].set_xlabel('Tumour size', fontsize=30)
     ax[2].set_ylabel('ESP', fontsize=30)
     ax[2].tick_params(axis='both', which='major', labelsize=30)
     ax[2].legend(fontsize=24)
