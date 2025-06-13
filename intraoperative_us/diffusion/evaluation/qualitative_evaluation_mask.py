@@ -310,7 +310,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
     ## print the logging in the legend
     ax[1].hist(real_masks[:,2], bins=bins, color='orchid', label='Real', alpha=0.5)
     ax[1].hist(gen_masks[:,2],  bins=bins, color='forestgreen', label='Gen data', alpha=0.5)
-    ax[1].set_xlabel('ESP', fontsize=30)
+    ax[1].set_xlabel('ESD', fontsize=30)
     ax[1].set_ylabel('Count', fontsize=30)
     ax[1].tick_params(axis='both', which='major', labelsize=30)
     ax[1].legend(fontsize=24)
@@ -329,7 +329,7 @@ def infer(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_po
     ax[2].set_yscale('log')
     ax[2].set_xscale('log')
     ax[2].set_xlabel('Tumour size', fontsize=30)
-    ax[2].set_ylabel('ESP', fontsize=30)
+    ax[2].set_ylabel('ESD', fontsize=30)
     ax[2].tick_params(axis='both', which='major', labelsize=30)
     ax[2].legend(fontsize=24)
     ax[2].grid(linestyle=':')
