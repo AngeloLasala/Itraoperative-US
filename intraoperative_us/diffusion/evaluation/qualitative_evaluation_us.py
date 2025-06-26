@@ -14,6 +14,7 @@ import numpy as np
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 
 from intraoperative_us.diffusion.evaluation.investigate_vae import get_config_value, get_best_model
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS, GenerateDataset
@@ -88,7 +89,7 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler, sh
         for i, (gen_img, mask) in enumerate(data_gen_mask):
             ## plt the generated image and the mask
             print(gen_img.shape, mask.shape)
-            plt.figure(figsize=(25,12), num=f'gen_{i}_epoch_{epoch}.png', tight_layout=True)
+            plt.figure(figsize=(19,5), num=f'gen_{i}_epoch_{epoch}.png', tight_layout=True)
             plt.subplot(1,3,2)
             plt.imshow(gen_img[0,:,:].cpu().numpy(), cmap='gray')
             plt.title('Generated image', fontsize=30)
@@ -100,10 +101,12 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler, sh
             plt.subplot(1,3,3)
             plt.imshow(gen_img[0,:,:].cpu().numpy(), cmap='gray')
             tumor_mask = mask[0,:,:].cpu().numpy()
-            plt.imshow(np.ma.masked_where(tumor_mask == 0, tumor_mask), cmap='ocean', alpha=0.3)
+            custom_cmap = ListedColormap(['none', 'steelblue'])
+            plt.imshow(np.ma.masked_where(tumor_mask == 0, tumor_mask), cmap=custom_cmap, alpha=0.3)
+            plt.colorbar(ticks=[0, 1], label='Mask', orientation='vertical')
             plt.title('Generated image with mask', fontsize=30)
             plt.axis('off')
-            plt.savefig(os.path.join(par_dir, trial, split, experiment, f'w_{guide_w}', scheduler, f'gen_{i}_epoch_{epoch}.png'), dpi=300)
+            plt.savefig(os.path.join(par_dir, trial, split, experiment, f'w_{guide_w}', scheduler, f'gen_{i}_epoch_{epoch}.pdf'), dpi=600)
             plt.show() 
 
 
