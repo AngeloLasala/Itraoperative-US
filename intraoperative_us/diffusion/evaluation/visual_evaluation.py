@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from PIL import Image   
 import argparse
 import numpy as np
+from matplotlib.colors import LinearSegmentedColormap
 
 def traslation(image, tx, ty):
     """
@@ -24,10 +25,12 @@ if __name__ == '__main__':
     ## subject = {id:1, slide: 158} -> mask: 336 - tx: 0, ty: 0
     ## subject = {id:4, slide: 168} -> mask: 195 - tx: 10, ty: 10
     ## subject = {id:17, slide: 175} -> mask: 161 - tx: 0, ty: 0
+
+    subject_dict = {'id':17, 'slide': 175, 'tx': 0, 'ty': 0}
+    gen_id = 161
     
     # path or generated data
     gen_path = "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/trained_model/one_step/Stack_finetuning/split_1/ldm_finetuning/w_-1.0/ddpm/samples_ep_8000"
-    gen_id = 161
     ius_gen = os.path.join(gen_path, 'ius', f'x0_{gen_id}.png')
     mask_gen = os.path.join(gen_path, 'masks', f'mask_{gen_id}.png')
 
@@ -38,13 +41,13 @@ if __name__ == '__main__':
     mask_gen = mask_gen.resize((256, 256), Image.NEAREST)  # Use nearest neighbor for masks
     
     # apply traslation to the generated image
-    ius_gen = traslation(ius_gen, 0, 0)
-    mask_gen = traslation(mask_gen, 0, 0)
+    ius_gen = traslation(ius_gen, subject_dict['tx'], subject_dict['ty'])
+    mask_gen = traslation(mask_gen, subject_dict['tx'], subject_dict['ty'])
 
     # real data path
     real_path = "/media/angelo/OS/Users/lasal/OneDrive - Scuola Superiore Sant'Anna/PhD_notes/Visiting_Imperial/RESECT_iUS_dataset/dataset"
-    subject = 17
-    slide = 175
+    subject = subject_dict['id']
+    slide = subject_dict['slide']
 
     ius_real = os.path.join(real_path, f'Case{subject}-US-before', 'volume', f'Case{subject}-US-before_{slide}.png')
     mask = os.path.join(real_path, f'Case{subject}-US-before', 'tumor', f'Case{subject}-US-before_{slide}.png')
@@ -72,8 +75,12 @@ if __name__ == '__main__':
     ax[0, 1].set_title('Generated Mask')
     ax[0, 2].axis('off')
     ax[0, 2].set_title(f'SD maps')
-    ax[0, 2].imshow(mask*0.5 + np.abs(mask_gen - mask)*0.8, cmap='bone')
-    ## add the cmap colorbar
+    custom_cmap = LinearSegmentedColormap.from_list(
+                    'custom_deepskyblue',
+                    ['black', 'deepskyblue', 'white'],
+                    N=256  # number of levels
+                )
+    ax[0, 2].imshow(mask*0.5 + np.abs(mask_gen - mask)*0.8, cmap=custom_cmap)
     cbar = plt.colorbar(ax[0, 2].images[0], ax=ax[0, 2], orientation='vertical')
     cbar.ax.tick_params(labelsize=20)
     
@@ -89,12 +96,10 @@ if __name__ == '__main__':
     ax[1, 2].axis('off')
     ax[1, 2].set_title(f'SD images')
 
-    ax[1, 2].imshow(np.abs(ius_gen - ius_real), cmap='bone')
+    ax[1, 2].imshow(np.square(ius_gen - ius_real), cmap=custom_cmap)
     ## add the cmap colorbar
     cbar = plt.colorbar(ax[1, 2].images[0], ax=ax[1, 2], orientation='vertical')
     cbar.set_label('', rotation=270, labelpad=15)
     cbar.ax.tick_params(labelsize=20)
-    
-
-
+    plt.savefig(os.path.join('/home/angelo/Scrivania', f"subject_{subject}_{subject_dict['tx']}_{subject_dict['ty']}.pdf"), dpi=300)
     plt.show()
