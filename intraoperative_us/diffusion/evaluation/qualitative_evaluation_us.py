@@ -101,13 +101,14 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler, sh
             plt.subplot(1,3,3)
             plt.imshow(gen_img[0,:,:].cpu().numpy(), cmap='gray')
             tumor_mask = mask[0,:,:].cpu().numpy()
-            custom_cmap = ListedColormap(['none', 'steelblue'])
-            plt.imshow(np.ma.masked_where(tumor_mask == 0, tumor_mask), cmap=custom_cmap, alpha=0.3)
+            custom_cmap = ListedColormap(['none', 'deepskyblue'])
+            plt.imshow(np.ma.masked_where(tumor_mask == 0, tumor_mask), cmap=custom_cmap, alpha=0.4)
             plt.colorbar(ticks=[0, 1], label='Mask', orientation='vertical')
             plt.title('Generated image with mask', fontsize=30)
             plt.axis('off')
-            plt.savefig(os.path.join(par_dir, trial, split, experiment, f'w_{guide_w}', scheduler, f'gen_{i}_epoch_{epoch}.pdf'), dpi=600)
-            plt.show() 
+            plt.savefig(os.path.join(par_dir, trial, split, experiment, f'w_{guide_w}', scheduler, f'gen_{i}_epoch_{epoch}.pdf'), dpi=300)
+            plt.close()
+            # plt.show() 
 
 
     trial_folder = os.path.join(par_dir, trial, split)
