@@ -21,7 +21,7 @@ import yaml
 from torch.utils.data import DataLoader
 from intraoperative_us.diffusion.evaluation.investigate_vae import get_config_value
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS_mask, GeneratedMaskDataset
-
+from intraoperative_us.diffusion.evaluation.qualitative_evaluation_mask import mask_metrics
 
 class LogFactorial:
     def __init__(self, max_value):
@@ -355,6 +355,35 @@ class IRSMetric(ABC):
                     save_metric(os.path.join(output_path, results_path), model=model, key=key, value=value)
         return results
 
+def log_log_distance(x1, y1, x2, y2):
+    """
+    Calculate the Euclidean distance in log-log space between two points.
+    
+    Parameters:
+    - x1, y1: coordinates of the first point (must be > 0)
+    - x2, y2: coordinates of the second point (must be > 0)
+    - base: base of the logarithm (default is 10)
+    
+    Returns:
+    - Distance in log-log space
+    """
+    if x1 <= 0 or x1 == None:
+        x1 = 1e-10  # Avoid log(0) or negative values
+    if y1 == None:
+        y1 = 1e-10
+    if x1 <= 0 or y1 <= 0 or x2 <= 0 or y2 <= 0:
+        raise ValueError("All coordinates must be greater than 0 for logarithmic scale.")
+    
+
+    log_x1 = np.log(x1)
+    log_y1 = np.log(y1)
+    log_x2 = np.log(x2)
+    log_y2 = np.log(y2)
+    
+    dx = log_x2 - log_x1
+    dy = log_y2 - log_y1
+    
+    return np.sqrt(dx**2 + dy**2)
 
 def main(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_points, show_gen_mask):
     """
@@ -402,24 +431,22 @@ def main(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_poi
 
     # for loop to find the closest real mask 
     logging.info(f"Start comparing generated masks with real masks for compiting k_measured...")
-    dsc_list, idx_list = [], []
+    distance_list, idx_list = [], []
     for idx_gen, gen_mask in enumerate(tqdm(data_loader_gen, desc="Processing Generated Masks")): 
-        gen_mask = gen_mask
+        ts_gen, _, _, _, esd_gen = mask_metrics(gen_mask[0,0,:,:], n_points, show_plot=False)
         
-        dsc_best = 0.0
+        distance_best = 1e10
         idx_best = 0
         for idx_real, real_mask in enumerate(data_loader):
-            real_mask = real_mask
-            ## compute the dsc score
-            dsc_score = torch.sum(torch.logical_and(gen_mask, real_mask)) / torch.sum(torch.logical_or(gen_mask, real_mask))
-            
-            if dsc_score > dsc_best:
-                dsc_best = dsc_score
+            ts_real, _, _, _, esd_real = mask_metrics(real_mask[0,0,:,:], n_points, show_plot=False)
+            distance = log_log_distance(ts_gen, esd_gen, ts_real, esd_real)
+                                  
+            if distance < distance_best:
+                distance_best = distance
                 idx_best = idx_real
-        dsc_list.append(float(dsc_best))
+        distance_list.append(float(distance_best))
         idx_list.append(idx_best)
     
-    print(len(dsc_list), len(idx_list))
     ## printthe unique values of idx_list
     unique_idx = set(idx_list)
     print(f"Number of unique real masks: {len(unique_idx)}")
