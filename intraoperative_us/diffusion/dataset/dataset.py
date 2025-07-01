@@ -376,13 +376,14 @@ class GeneratedMaskDataset(torch.utils.data.Dataset):
     """
     Dataset of generated mask image loaded from the path
     """
-    def __init__(self, par_dir, size, input_channels):
+    def __init__(self, par_dir, size, input_channels, prefix_mask='x0'):
         self.par_dir = par_dir
         self.size = size
         self.input_channels = input_channels
+        self.prefix_mask = prefix_mask
 
         self.data_dir_label = par_dir
-        self.files = [os.path.join(self.data_dir_label, f'x0_{i}.png') for i in range(len(os.listdir(self.data_dir_label)))]
+        self.files = [os.path.join(self.data_dir_label, f'{prefix_mask}_{i}.png') for i in range(len(os.listdir(self.data_dir_label)))]
 
     def __len__(self):
         return len(os.listdir(self.data_dir_label))

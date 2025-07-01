@@ -85,7 +85,7 @@ def main(args):
     experiment_dict = {}
     for exp in list_experiment:
         name_of_exp = exp.split("_")[-1]
-        print(f"Experiment: {name_of_exp}")
+        print(f"R: {name_of_exp}")
         prediction_path = os.path.join(args.save_folder, args.results_folder, exp, "inference")
 
         ## read summary file
@@ -158,7 +158,7 @@ def main(args):
         "Score": [],
         "Metric": [],
         "Type": [],
-        "Experiment": []
+        "R": []
     }
 
     for exp_name, exp_data in data.items():
@@ -167,14 +167,14 @@ def main(args):
             plot_data["Score"].append(score)
             plot_data["Metric"].append("DSC")
             plot_data["Type"].append("Real" if exp_name == "Real" else "Generated")
-            plot_data["Experiment"].append(exp_name)
+            plot_data["R"].append(exp_name)
 
         # Hausdorff scores
         for score in exp_data["hd"]:
             plot_data["Score"].append(score)
             plot_data["Metric"].append("Hausdorff")
             plot_data["Type"].append("Real" if exp_name == "Real" else "Generated")
-            plot_data["Experiment"].append(exp_name)
+            plot_data["R"].append(exp_name)
 
     df = pd.DataFrame(plot_data)
 
@@ -182,7 +182,7 @@ def main(args):
     sns.set(style="whitegrid")
 
     # Create figure
-    fig, axes = plt.subplots(1, 2, figsize=(20, 8), tight_layout=True) # Increased figure size for better readability
+    fig, axes = plt.subplots(2, 1, figsize=(9, 10), tight_layout=True) # Increased figure size for better readability
 
     # Colors
     dsc_color_real = (65/255, 105/255, 225/255)
@@ -199,14 +199,16 @@ def main(args):
     experiments = list(experiment_dict.keys())
     
     # DSC plot
-    sns.violinplot(x="Experiment", y="Score", hue="Type", data=df[df["Metric"] == "DSC"],
+    sns.violinplot(x="R", y="Score", hue="Type", data=df[df["Metric"] == "DSC"],
                 ax=axes[0], inner=None, palette={"Real": dsc_color_real, "Generated": dsc_color_generated})
-    sns.stripplot(x="Experiment", y="Score", hue="Type", data=df[df["Metric"] == "DSC"],
+    sns.stripplot(x="R", y="Score", hue="Type", data=df[df["Metric"] == "DSC"],
                 ax=axes[0], color="black", size=6, jitter=True, alpha=0.6)
-    axes[0].set_title("DSC Scores by Experiment", fontsize=14)
-    axes[0].set_ylabel("DSC Score", fontsize=20)
-    axes[0].set_xlabel("Experiment Type", fontsize=20)
-    axes[0].tick_params(axis='x', rotation=30)
+    axes[0].set_ylabel("DSC", fontsize=26)
+    axes[0].set_xlabel(r'' , fontsize=28)
+    # deactivate the x ticks
+    axes[0].set_xticklabels([])  # Remove x-tick labels for the first plot
+
+
     # Adjust legend to be outside the plot
     # axes[0].legend(title="Data Type", loc='upper left', bbox_to_anchor=(1, 1))
 
@@ -227,14 +229,16 @@ def main(args):
                     axes[1].text((i + j) / 2, y + text_offset, '*', ha='center', va='bottom', fontsize=18)
 
     # Hausdorff plot
-    sns.violinplot(x="Experiment", y="Score", hue="Type", data=df[df["Metric"] == "Hausdorff"],
+    sns.violinplot(x="R", y="Score", hue="Type", data=df[df["Metric"] == "Hausdorff"],
                 ax=axes[1], inner=None, palette={"Real": haus_color_real, "Generated": haus_color_generated})
-    sns.stripplot(x="Experiment", y="Score", hue="Type", data=df[df["Metric"] == "Hausdorff"],
+    sns.stripplot(x="R", y="Score", hue="Type", data=df[df["Metric"] == "Hausdorff"],
                 ax=axes[1], color="black", size=6, jitter=True, alpha=0.6)
-    axes[1].set_title("Hausdorff 95th Percentile Scores by Experiment", fontsize=14)
-    axes[1].set_ylabel("Hausdorff 95th Percentile", fontsize=22)
-    axes[1].set_xlabel("Experiment Type", fontsize=22)
-    axes[1].tick_params(axis='x', rotation=30)
+    axes[1].set_ylabel("HD", fontsize=26)
+    axes[1].set_xlabel(r'$ R = \frac{N_{\text{gen}}}{N_{\text{real}}} $' , fontsize=28)
+    exmperiments_name = [0,1,2,3]
+    # change the name of the x ticks
+    axes[1].set_xticklabels(exmperiments_name, fontsize=26)
+
     # Adjust legend to be outside the plot
     # axes[1].legend(title="Data Type", loc='upper left', bbox_to_anchor=(1, 1))
 
