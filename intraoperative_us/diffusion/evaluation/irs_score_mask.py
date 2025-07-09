@@ -20,8 +20,9 @@ import logging
 import yaml
 from torch.utils.data import DataLoader
 from intraoperative_us.diffusion.evaluation.investigate_vae import get_config_value
-from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS_mask, GeneratedMaskDataset
+from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS_mask, GeneratedMaskDataset, IntraoperativeUS, GenerateDataset
 from intraoperative_us.diffusion.evaluation.qualitative_evaluation_mask import mask_metrics
+from matplotlib.colors import LinearSegmentedColormap
 
 class LogFactorial:
     def __init__(self, max_value):
@@ -385,7 +386,31 @@ def log_log_distance(x1, y1, x2, y2):
     
     return np.sqrt(dx**2 + dy**2)
 
-def main(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_points, show_gen_mask):
+def lin_lin_distance(x1, y1, x2, y2):
+    """
+    Calculate the Euclidean distance in log-log space between two points.
+    
+    Parameters:
+    - x1, y1: coordinates of the first point (must be > 0)
+    - x2, y2: coordinates of the second point (must be > 0)
+    - base: base of the logarithm (default is 10)
+    
+    Returns:
+    - Distance in log-log space
+    """
+    if x1 == None:
+        x1 = 1e-10
+    if y1 == None:
+        y1 = 1e-10
+    if x1 <= 0 or y1 <= 0 or x2 <= 0 or y2 <= 0:
+        raise ValueError("All coordinates must be greater than 0 for logarithmic scale.")
+    
+    dx = x2 - x1
+    dy = y2 - y1
+    
+    return np.sqrt(dx**2 + dy**2)
+
+def main(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler_type, n_points, show_gen_mask):
     """
     """
      ######## Read the config file #######
@@ -406,7 +431,8 @@ def main(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_poi
 
 
     # REAL TUMOR MASK
-    data_img = IntraoperativeUS_mask(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
+    condition_types = {'condition_types': ['image']}
+    data_img = IntraoperativeUS(size= [dataset_config['im_size_h'], dataset_config['im_size_w']],
                             dataset_path= dataset_config['dataset_path'],
                             im_channels= dataset_config['im_channels'],
                             splitting_json=dataset_config['splitting_json'],
@@ -415,37 +441,93 @@ def main(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_poi
                             train_percentage=dataset_config['train_percentage'],
                             val_percentage=dataset_config['val_percentage'],
                             test_percentage=dataset_config['test_percentage'],
+                            condition_config= condition_types,
                             data_augmentation=False)
+    print(data_img.condition_types)
     logging.info(f'len train data {len(data_img)}')
     data_loader = DataLoader(data_img, batch_size=1, shuffle=False, num_workers=8)
-
+    
     # GENERATIVE MASK
     generated_mask_dir = os.path.join(par_dir, trial, experiment, f'w_{guide_w}', scheduler_type, f"samples_ep_{epoch}")
     prefix_mask = 'mask' if args.type_image != 'mask' else 'x0'
     if args.type_image != 'mask':
         generated_mask_dir = os.path.join(generated_mask_dir, "masks")
 
-    data_gen = GeneratedMaskDataset(par_dir = generated_mask_dir, size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'], prefix_mask=prefix_mask)
+    data_gen = GenerateDataset(par_dir = par_dir, trial=trial, experiment=experiment, epoch=epoch, guide_w=guide_w, scheduler=scheduler_type, split=split,
+                                 size=[dataset_config['im_size_h'], dataset_config['im_size_w']], input_channels=dataset_config['im_channels'],
+                                 mask=True)#, prefix_mask=prefix_mask)
     data_loader_gen = DataLoader(data_gen, batch_size=1, shuffle=False, num_workers=8)
     logging.info(f'len generated data {len(data_gen)}')
 
     # for loop to find the closest real mask 
     logging.info(f"Start comparing generated masks with real masks for compiting k_measured...")
     distance_list, idx_list = [], []
-    for idx_gen, gen_mask in enumerate(tqdm(data_loader_gen, desc="Processing Generated Masks")): 
-        ts_gen, _, _, _, esd_gen = mask_metrics(gen_mask[0,0,:,:], n_points, show_plot=False)
+    sampled_count = 0
+    for idx_gen, data_gen in enumerate(tqdm(data_loader_gen, desc="Processing Generated Masks")):
+        gen_ius = (data_gen[0] + 1.)/2.  
+        gen_ius = gen_ius[0,0,:,:].cpu().numpy() 
+        gen_mask = data_gen[1]
+        sampled_count += 1
+        
+        ts_gen, x_gen, y_gen, _, esd_gen = mask_metrics(gen_mask[0,0,:,:], n_points, show_plot=False)
         
         distance_best = 1e10
         idx_best = 0
-        for idx_real, real_mask in enumerate(data_loader):
-            ts_real, _, _, _, esd_real = mask_metrics(real_mask[0,0,:,:], n_points, show_plot=False)
-            distance = log_log_distance(ts_gen, esd_gen, ts_real, esd_real)
+        best_real_ius, best_real_mask = None, None
+        for idx_real, real_data in enumerate(data_loader):
+            real_ius = (real_data[0] + 1.)/2.
+            real_ius = real_ius[0,0,:,:].cpu().numpy()
+            real_mask = real_data[1]['image']
+
+            ts_real, x_real, y_real, _, esd_real = mask_metrics(real_mask[0,0,:,:], n_points, show_plot=False)
+            distance = lin_lin_distance(ts_gen, esd_gen, ts_real, esd_real) + lin_lin_distance(x_gen, y_gen, x_real, y_real)
                                   
             if distance < distance_best:
                 distance_best = distance
+                best_real_ius = real_ius
+                best_real_mask = real_mask
                 idx_best = idx_real
-        distance_list.append(float(distance_best))
+        distance_list.append(distance_best)
         idx_list.append(idx_best)
+        # print(f"Generated mask {idx_gen} -- Closest real mask {idx_best} -- Distance: {distance_best:.4f}")
+
+        fig, ax = plt.subplots(2, 3, figsize=(18, 10), tight_layout=True)
+        gen_mask = gen_mask[0,0,:,:].cpu().numpy()
+        best_real_mask = best_real_mask[0,0,:,:].cpu().numpy()
+        ax[0, 0].imshow(best_real_mask, cmap='gray')
+        ax[0, 0].axis('off')
+        ax[0, 0].set_title('Mask')
+        ax[0, 1].imshow(gen_mask, cmap='gray')
+        ax[0, 1].axis('off')
+        ax[0, 1].set_title('Generated Mask')
+        ax[0, 2].axis('off')
+        ax[0, 2].set_title(f'SD maps')
+        custom_cmap = LinearSegmentedColormap.from_list(
+                        'custom_deepskyblue',
+                        ['black', 'deepskyblue', 'white'],
+                        N=256  # number of levels
+                    )
+        ax[0, 2].imshow(best_real_mask*0.5 + np.abs(gen_mask - best_real_mask)*0.8, cmap=custom_cmap)
+        cbar = plt.colorbar(ax[0, 2].images[0], ax=ax[0, 2], orientation='vertical')
+        cbar.ax.tick_params(labelsize=20)
+        
+        ax[1, 0].imshow(best_real_ius, cmap='gray')
+        ax[1, 0].axis('off')
+        ax[1, 0].set_title('Real Image')
+        ax[1, 1].imshow(gen_ius, cmap='gray')
+        ax[1, 1].axis('off')
+        ax[1, 1].set_title('Generated Image')
+        ax[1, 2].axis('off')
+        ax[1, 2].set_title(f'SD images')
+
+        ax[1, 2].imshow(np.square(gen_ius - best_real_ius), cmap=custom_cmap)
+        # add the cmap colorbar
+        cbar = plt.colorbar(ax[1, 2].images[0], ax=ax[1, 2], orientation='vertical')
+        cbar.set_label('', rotation=270, labelpad=15)
+        cbar.ax.tick_params(labelsize=20)
+        # plt.savefig(os.path.join('/home/angelo/Scrivania', f"subject_{subject}_{subject_dict['tx']}_{subject_dict['ty']}.pdf"), dpi=300)
+        plt.show()
+        
     
     ## printthe unique values of idx_list
     unique_idx = set(idx_list)
@@ -464,7 +546,7 @@ def main(par_dir, conf, trial, experiment, epoch, guide_w, scheduler_type, n_poi
     dsc_list_path = os.path.join(generated_mask_dir, 'dsc_list.npy')
     idx_list_path = os.path.join(generated_mask_dir, 'idx_list.npy')
 
-    irs_low, irs_pred, irs_up = irs_metric.compute_irs_inf(len(data_img), len(data_gen), len(unique_idx))
+    irs_low, irs_pred, irs_up = irs_metric.compute_irs_inf(len(data_img), sampled_count, len(unique_idx))
 
 
 if __name__ == '__main__':
@@ -473,6 +555,7 @@ if __name__ == '__main__':
                                                    help='folder to save the model')
     parser.add_argument('--type_image', type=str, default='mask', help='type of image to evaluate, ius or mask')
     parser.add_argument('--trial', type=str, default='trial_1', help='trial name for saving the model, it is the trial folde that contain the VAE model')
+    parser.add_argument('--split', type=str, default='split_1', help='split of CV')
     parser.add_argument('--experiment', type=str, default='cond_ldm', help="""name of expermient, it is refed to the type of condition and in general to the
                                                                               hyperparameters (file .yaml) that is used for the training, it can be cond_ldm, cond_ldm_2, """)
     parser.add_argument('--guide_w', type=float, default=0.0, help='guide_w for the conditional model, w=-1 [unconditional], w=0 [vanilla conditioning], w>0 [guided conditional]')
@@ -487,10 +570,10 @@ if __name__ == '__main__':
     logging_dict = {'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR, 'critical':logging.CRITICAL}
     logging.basicConfig(level=logging_dict[args.log])
 
-    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial)
+    experiment_dir = os.path.join(args.save_folder, args.type_image, args.trial, args.split)
     if 'vae' in os.listdir(experiment_dir): config = os.path.join(experiment_dir, 'vae', 'config.yaml')
 
-    main(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial,
+    main(par_dir = os.path.join(args.save_folder, args.type_image), conf=config, trial=args.trial, split=args.split,
          experiment=args.experiment, epoch=args.epoch, guide_w=args.guide_w, scheduler_type=args.scheduler_type, n_points=args.n_points,
          show_gen_mask=args.show_gen_mask)
 
