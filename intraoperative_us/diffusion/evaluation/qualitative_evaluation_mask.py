@@ -21,6 +21,7 @@ import matplotlib.ticker as mticker
 from intraoperative_us.diffusion.evaluation.investigate_vae import get_config_value
 from intraoperative_us.diffusion.dataset.dataset import IntraoperativeUS_mask, GeneratedMaskDataset
 from intraoperative_us.diffusion.models.vae import VAE
+from matplotlib.colors import LinearSegmentedColormap
 
 from scipy.fft import fft, fftfreq
 
@@ -132,24 +133,31 @@ def fft_descriptor(mask, n_points=100, show_plot=False):
 
     if show_plot:
 
-        fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(25, 8), tight_layout=True)
-        ax[0].imshow(mask, cmap='gray', alpha=0.8)
+        fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(25, 8), tight_layout=True, num=f'FFT descriptor {mask.shape[0]}x{mask.shape[1]}', dpi=100)
+        custom_cmap = LinearSegmentedColormap.from_list(
+                    'custom_deepskyblue',
+                    ['black', 'deepskyblue'],
+                    N=256  # number of levels
+                )
+        # binaryze map
+        mask = (mask > 0.5).astype(np.float32)  # Convert to binary (0 or 1)
+        ax[0].imshow(mask*0.5, cmap=custom_cmap)
         for i in range(len(sampled_points)):
             if i == 0:
                 ax[0].scatter(sampled_points[i,0], sampled_points[i,1], c='C3', s=50, label='contour points')
             else:
                 ax[0].scatter(sampled_points[i,0], sampled_points[i,1], c='C3', s=50)
-        ax[0].scatter(mean_x, mean_y, c='royalblue', s=800, marker='*', label='centroid')
+        ax[0].scatter(mean_x, mean_y, c='gold', s=800, marker='*', label='centroid')
         ax[0].set_title('Mask with contour points and centroid', fontsize=28)
         ax[0].legend(fontsize=28)
         ax[0].axis('off')
         
         
         ax[1].set_title('Distance from centroid', fontsize=26)
-        ax[1].plot(distances , 'C3', lw=6)
+        ax[1].plot(distances , 'deepskyblue', lw=6)
         ax[1].set_xlabel('contourn points', fontsize=28)
         ax[1].set_ylabel('Distance from centroid '+ r'$(d)$', fontsize=28)
-        ax[1].axhline(y=np.mean(distances), color='C3', linestyle='--', lw=4, label='mean '+r'$(\bar{d})$')
+        ax[1].axhline(y=np.mean(distances), color='deepskyblue', linestyle='--', lw=4, label='mean '+r'$(\bar{d})$')
         ax[1].set_ylim(0,60)
         ax[1].tick_params(axis='x', labelsize=24)
         ax[1].tick_params(axis='y', labelsize=24)
