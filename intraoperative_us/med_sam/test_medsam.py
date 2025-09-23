@@ -162,58 +162,59 @@ def infer(par_dir, conf, trial, split, experiment, epoch, guide_w, scheduler,
         logging.info('Real images...')
         real_dsc, real_hausdorff = [], []
         for i, data in enumerate(data_loader):
-            img = data[0].squeeze(0).permute(1, 2, 0).cpu().numpy()  # shape: (H, W, C)
-            W, H = img.shape[0], img.shape[1]
-            img_resized = transform.resize(img, (1024, 1024), order=3, preserve_range=True, anti_aliasing=True).astype(np.float32)  
-            img_resized = (img_resized - img_resized.min()) / np.clip(img_resized.max() - img_resized.min(), a_min=1e-8, a_max=None)
-            img_tensor = torch.tensor(img_resized).permute(2, 0, 1).unsqueeze(0).repeat(1,3,1,1).to(device)
+            if i % 8==0:
+                img = data[0].squeeze(0).permute(1, 2, 0).cpu().numpy()  # shape: (H, W, C)
+                W, H = img.shape[0], img.shape[1]
+                img_resized = transform.resize(img, (1024, 1024), order=3, preserve_range=True, anti_aliasing=True).astype(np.float32)  
+                img_resized = (img_resized - img_resized.min()) / np.clip(img_resized.max() - img_resized.min(), a_min=1e-8, a_max=None)
+                img_tensor = torch.tensor(img_resized).permute(2, 0, 1).unsqueeze(0).repeat(1,3,1,1).to(device)
 
-            mask = data[1]['image']
-            if mask[0, 0].sum() > 0:
-                bbox = np.array([get_bbox_from_mask(mask[0, 0].cpu().numpy())])
-                box_1024 = bbox / np.array([W, H, W, H]) * 1024
-        
-                with torch.no_grad():
-                    image_embedding = medsam_model.image_encoder(img_tensor)
+                mask = data[1]['image']
+                if mask[0, 0].sum() > 0:
+                    bbox = np.array([get_bbox_from_mask(mask[0, 0].cpu().numpy())])
+                    box_1024 = bbox / np.array([W, H, W, H]) * 1024
+            
+                    with torch.no_grad():
+                        image_embedding = medsam_model.image_encoder(img_tensor)
 
 
-                medsam_seg = np.zeros((256, 256), dtype=np.uint8)
-                for bb in box_1024[0]:
-                    box = np.array(bb)[None, :]
-                    medsam_seg_i = medsam_inference(medsam_model, image_embedding, box, H, W)
-                    medsam_seg += medsam_seg_i
-                medsam_seg = (medsam_seg > 0).astype(np.uint8)
+                    medsam_seg = np.zeros((256, 256), dtype=np.uint8)
+                    for bb in box_1024[0]:
+                        box = np.array(bb)[None, :]
+                        medsam_seg_i = medsam_inference(medsam_model, image_embedding, box, H, W)
+                        medsam_seg += medsam_seg_i
+                    medsam_seg = (medsam_seg > 0).astype(np.uint8)
 
-                dsc, hausdorff = compute_metrics(mask[0, 0].detach().cpu().numpy(),
-                                                    medsam_seg)     
-                real_dsc.append(dsc)
-                real_hausdorff.append(hausdorff)
-            else:
-                print(f'Mask {i} is empty')
+                    dsc, hausdorff = compute_metrics(mask[0, 0].detach().cpu().numpy(),
+                                                        medsam_seg)     
+                    real_dsc.append(dsc)
+                    real_hausdorff.append(hausdorff)
+                else:
+                    print(f'Mask {i} is empty')
 
-            if show_gen_mask:
-                fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-                ax[0].imshow(img, cmap='gray')
-                for bb in bbox[0]:
-                    show_box(bb, ax[0])
-                ax[0].set_title("Input Image and Bounding Box")
-                ax[0].axis('off')
-                ax[1].imshow(img, cmap='gray')
-                
-                show_mask(medsam_seg, ax[1], label='MedSAM mask', color=[138/255, 43/255, 226/255, 0.5])
-                show_mask(mask[0, 0].cpu().numpy(), ax[1], label='mask', color=[60/255, 179/255, 113/255, 0.5])
-                for bb in bbox[0]:
-                    show_box(bb, ax[1])
-                ax[1].axis('off')
-                # Custom legend patches
-                legend_elements = [
-                    Patch(facecolor=[138/255, 43/255, 226/255, 0.5], label='MedSAM mask'),
-                    Patch(facecolor=(60/255, 179/255, 113/255, 0.5), label='mask'),
-                    Patch(facecolor=(0, 0, 0, 0), edgecolor='darkgreen', label='Bounding Box')
-                ]
-                ax[1].legend(handles=legend_elements, loc='upper right', fontsize=12)
-                ax[1].set_title("MedSAM vs Manual Segmentation")
-                plt.show()
+                if show_gen_mask:
+                    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+                    ax[0].imshow(img, cmap='gray')
+                    for bb in bbox[0]:
+                        show_box(bb, ax[0])
+                    ax[0].set_title("Input Image and Bounding Box")
+                    ax[0].axis('off')
+                    ax[1].imshow(img, cmap='gray')
+                    
+                    # show_mask(medsam_seg, ax[1], label='MedSAM mask', color=[138/255, 43/255, 226/255, 0.5])
+                    show_mask(mask[0, 0].cpu().numpy(), ax[1], label='mask', color=[0/255, 191/255, 255/255, 0.15]  )
+                    # for bb in bbox[0]:
+                    #     show_box(bb, ax[1])
+                    ax[1].axis('off')
+                    # Custom legend patches
+                    legend_elements = [
+                        Patch(facecolor=[138/255, 43/255, 226/255, 0.5], label='MedSAM mask'),
+                        Patch(facecolor=(60/255, 179/255, 113/255, 0.5), label='mask'),
+                        Patch(facecolor=(0, 0, 0, 0), edgecolor='darkgreen', label='Bounding Box')
+                    ]
+                    # ax[1].legend(handles=legend_elements, loc='upper right', fontsize=12)
+                    ax[1].set_title("MedSAM vs Manual Segmentation")
+                    plt.show()
 
         ## Generated image
         logging.info('Generated images...')
