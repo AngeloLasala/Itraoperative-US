@@ -389,6 +389,8 @@ if __name__ == '__main__':
     print()
 
     ## costum mode
+    print()
+    print('Custom Unet2DConditionModel')
     unet = UNet2DConditionModelCostum(model_config)
     latent = torch.randn(5, 4, 32, 32)
     mask = torch.randn(5, 1, 256, 256)
@@ -396,7 +398,6 @@ if __name__ == '__main__':
 
     out = unet(latent, 1, context_hidden_states, {'image': mask})
     get_number_parameter(unet)
-    print(out.shape)
 
     ## gplos
     class UNetWrapper(nn.Module):
@@ -414,14 +415,15 @@ if __name__ == '__main__':
 
     from thop import profile
     # ---- INPUT ----
-    latent = torch.randn(5, 4, 32, 32)
-    mask = torch.randn(5, 1, 256, 256)
-    context_hidden_states = torch.randn(5, 77, 768)
+    latent = torch.randn(1, 4, 32, 32)
+    mask = torch.randn(1, 1, 256, 256)
+    context_hidden_states = torch.randn(1, 77, 768)
     timestep = torch.tensor(1)  # dummy
 
     # ---- FORWARD CHECK ----
     out = unet(latent, timestep, context_hidden_states, {'image': mask})
     print(out.shape)
+
 
 
     # ---- WRAP PER THOP ----
@@ -440,6 +442,126 @@ if __name__ == '__main__':
 
     gflops = macs * 2 / 1e9
     print(f"GFLOPs: {gflops:.2f}")
+
+    print()
+    print('Unet2DConditionModel from diffuser')
+    unet_c = UNet2DConditionModel(
+                sample_size=model_config['sample_size'],
+                in_channels=4,
+                out_channels=model_config['z_channels'],
+                block_out_channels=model_config['down_channels'],
+                cross_attention_dim=model_config['cross_attention_dim'],
+            )
+    get_number_parameter(unet_c)
+
+    ## GFLOPs
+    wrapped_unet_c = UNetWrapper(unet_c).cpu()
+    latent = latent.cpu()
+    mask = mask.cpu()
+    context_hidden_states = context_hidden_states.cpu()
+    timestep = timestep.cpu()
+    macs, _ = profile(
+        wrapped_unet_c,
+        inputs=(latent, timestep, context_hidden_states, mask),
+        verbose=False
+    )
+    gflops = macs * 2 / 1e9
+    print(f"GFLOPs: {gflops:.2f}")
+    print()
+
+    ## Controlnet
+    from diffusers import ControlNetModel
+    
+    unet_base = UNet2DConditionModel(
+                sample_size=model_config['sample_size'],
+                in_channels=4,
+                out_channels=model_config['z_channels'],
+                block_out_channels=model_config['down_channels'],
+                cross_attention_dim=model_config['cross_attention_dim'],
+            )
+    controlnet = ControlNetModel.from_unet(unet_base)
+
+    class ControlNetTrainWrapper(nn.Module):
+        """
+        Wrapper per calcolare l'output del ControlNet + UNet base compatibile
+        con il forward pass del training loop.
+        """
+        def __init__(self, controlnet, unet_base):
+            super().__init__()
+            self.controlnet = controlnet
+            self.unet_base = unet_base
+
+        def forward(
+            self,
+            noisy_latents,
+            timesteps,
+            encoder_hidden_states,
+            cond_mask
+        ):
+            """
+            noisy_latents: latents con rumore
+            timesteps: timesteps per il forward diffusion
+            encoder_hidden_states: embedding testuali
+            cond_mask: condizione immagine per ControlNet
+            """
+
+            # ControlNet forward
+            down_block_res_samples, mid_block_res_sample = self.controlnet(
+                noisy_latents,
+                timesteps,
+                encoder_hidden_states=encoder_hidden_states,
+                controlnet_cond=cond_mask,
+                return_dict=False
+            )
+
+            # UNet base forward
+            base_out = self.unet_base(
+                noisy_latents,
+                timesteps,
+                encoder_hidden_states=encoder_hidden_states,
+                down_block_additional_residuals=[
+                    sample for sample in down_block_res_samples
+                ],
+                mid_block_additional_residual=mid_block_res_sample,
+                return_dict=False
+            )[0]
+
+            # Restituisci il residual totale compatibile con training
+            return base_out
+
+    bsz = 1  # 1 per misurare GFLOPs standard
+    latent_dim = 4
+    latent_h = latent_w = 32  # tipico per UNet nei diffusion
+
+    noisy_latents = torch.randn(bsz, latent_dim, latent_h, latent_w).cpu()
+    timesteps = torch.randint(
+        low=0,
+        high=1000,  # o scheduler.config.num_train_timesteps
+        size=(bsz,),
+    ).long().cpu()
+
+    encoder_hidden_states = torch.randn(bsz, 77, 768).cpu()
+
+    cond_mask = torch.randn(bsz, 3, 256, 256).cpu()
+
+    # ---- Wrap and profile ----
+
+    wrapper = ControlNetTrainWrapper(controlnet, unet_base).cpu()
+
+    # THOP: calcola MACs e parametri
+    macs, params = profile(
+        wrapper,
+        inputs=(noisy_latents, timesteps, encoder_hidden_states, cond_mask),
+        verbose=False
+    )
+
+    # Converti MACs in GFLOPs (1 MAC ≈ 2 FLOPs)
+    gflops = macs * 2 / 1e9
+
+    print(f"Parameters: {params:,} ({params/1e6:.2f} M)")
+    print(f"GFLOPs per forward pass (batch={bsz}): {gflops:.2f} GFLOPs")
+
+
 
     ## load 2D conditional unet model from diffuser
     # unet = UNet2DConditionModel.from_pretrained("sd-legacy/stable-diffusion-v1-5", subfolder="unet", use_safetensors=True)
