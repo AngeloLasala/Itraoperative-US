@@ -294,34 +294,15 @@ if __name__ == '__main__':
     out = model(x)
     print(out[0].shape, out[1].shape)
     print(model.get_number_parameter())
-    print()
 
-    ## VAE siamise
-    dataset_config = {
-        'im_channels': 1,
-        'im_size_h': 256
-    }
+    # ---- GFLOPs ----
+    from thop import profile
+    model = model.cpu()
+    x = x.cpu()
+    macs, params = profile(model, inputs=(x,), verbose=False)
+    # 1 MAC ≈ 2 FLOPs
+    gflops = macs * 2 / 1e9
+    print(f"GFLOPs: {gflops:.2f}")
 
-    autoencoder_config = {
-        'autoencoder_type': 'stabilityai/sd-vae-ft-mse',
-        'down_channels': [64, 128, 256, 256],
-        'z_channels': 4,
-        'down_block_types': [
-            "DownEncoderBlock2D",
-            "DownEncoderBlock2D",
-            "DownEncoderBlock2D",
-            "DownEncoderBlock2D"
-        ],
-        'up_block_types': [
-            "UpDecoderBlock2D",
-            "UpDecoderBlock2D",
-            "UpDecoderBlock2D",
-            "UpDecoderBlock2D"
-        ]
-    }
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = VAE_siamise(dataset_config, autoencoder_config, device)
-    print(model)
-
+    
 
