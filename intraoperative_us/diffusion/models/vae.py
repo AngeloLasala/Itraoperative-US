@@ -304,5 +304,47 @@ if __name__ == '__main__':
     gflops = macs * 2 / 1e9
     print(f"GFLOPs: {gflops:.2f}")
 
-    
+    ## Autoencoder kl
+    print('AutoencoderKL Model from hugginface')
+    vae_kl = AutoencoderKL(
+                    in_channels=2,
+                    out_channels=2,
+                    sample_size=256,
+                    block_out_channels=[128, 256, 512, 512],
+                    latent_channels=4,  # Default is 4
+                    down_block_types=[
+                        "DownEncoderBlock2D",
+                        "DownEncoderBlock2D",
+                        "DownEncoderBlock2D",
+                        "DownEncoderBlock2D"
+                    ],
+                    up_block_types=[
+                        "UpDecoderBlock2D",
+                        "UpDecoderBlock2D",
+                        "UpDecoderBlock2D",
+                        "UpDecoderBlock2D"
+                    ]
+                ).to('cpu')
 
+    
+    # ---- INPUT ----
+    x = torch.randn(1, 2, 256, 256).cpu()
+
+    # ---- FORWARD CHECK ----
+    out = vae_kl(x)
+
+    # ---- NUMBER OF PARAMETERS ----
+    total_params = sum(p.numel() for p in vae_kl.parameters())
+    trainable_params = sum(p.numel() for p in vae_kl.parameters() if p.requires_grad)
+
+    print(f"Total parameters: {total_params:,} ({total_params/1e9:.4f} B)")
+    print(f"Trainable parameters: {trainable_params:,} ({trainable_params/1e9:.4f} B)")
+
+    # ---- GFLOPs ----
+    macs, _ = profile(vae_kl, inputs=(x,), verbose=False)
+    gflops = macs * 2 / 1e9  # 1 MAC ≈ 2 FLOPs
+
+    print(f"GFLOPs per forward pass: {gflops:.2f}")
+
+
+    
