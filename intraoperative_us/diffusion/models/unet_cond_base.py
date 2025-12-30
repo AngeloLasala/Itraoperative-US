@@ -398,6 +398,49 @@ if __name__ == '__main__':
     get_number_parameter(unet)
     print(out.shape)
 
+    ## gplos
+    class UNetWrapper(nn.Module):
+        def __init__(self, unet):
+            super().__init__()
+            self.unet = unet
+
+        def forward(self, latent, timestep, context, mask):
+            return self.unet(
+                latent,
+                timestep,
+                context,
+                {'image': mask}
+            )
+
+    from thop import profile
+    # ---- INPUT ----
+    latent = torch.randn(5, 4, 32, 32)
+    mask = torch.randn(5, 1, 256, 256)
+    context_hidden_states = torch.randn(5, 77, 768)
+    timestep = torch.tensor(1)  # dummy
+
+    # ---- FORWARD CHECK ----
+    out = unet(latent, timestep, context_hidden_states, {'image': mask})
+    print(out.shape)
+
+
+    # ---- WRAP PER THOP ----
+    wrapped_unet = UNetWrapper(unet).cpu()
+    latent = latent.cpu()
+    mask = mask.cpu()
+    context_hidden_states = context_hidden_states.cpu()
+    timestep = timestep.cpu()
+
+    # ---- CALCOLO FLOPs ----
+    macs, _ = profile(
+        wrapped_unet,
+        inputs=(latent, timestep, context_hidden_states, mask),
+        verbose=False
+    )
+
+    gflops = macs * 2 / 1e9
+    print(f"GFLOPs: {gflops:.2f}")
+
     ## load 2D conditional unet model from diffuser
     # unet = UNet2DConditionModel.from_pretrained("sd-legacy/stable-diffusion-v1-5", subfolder="unet", use_safetensors=True)
     # unet = UNet2DConditionModel.from_pretrained("unet_cond/UNet2DConditionModel_SD1.5_default",
