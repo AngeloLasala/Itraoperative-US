@@ -5,6 +5,10 @@ import torch
 import torch.nn as nn
 from intraoperative_us.diffusion.models.blocks import get_time_embedding
 from intraoperative_us.diffusion.models.blocks import DownBlock, MidBlock, UpBlockUnet
+import torch
+import torch.nn as nn
+from diffusers import UNet2DModel
+from thop import profile
 
 class Unet(nn.Module):
     """
@@ -121,3 +125,114 @@ if __name__ == '__main__':
     out = model(x, t)
     print(out.shape)
     # print(out)
+
+
+    # Test with diffusers UNet2DModel
+    def get_number_parameter(model):
+        """
+        Count the total number of trainable parameters in the model.
+        """
+        total_params = sum(p.numel() for p in model.parameters())
+        trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        non_trainable_params = total_params - trainable_params
+        
+        print("=" * 60)
+        print("Model Parameters")
+        print("=" * 60)
+        print(f"Total Parameters:         {total_params:,} ({total_params/1e6:.2f} M)")
+        print(f"Trainable Parameters:     {trainable_params:,} ({trainable_params/1e6:.2f} M)")
+        print(f"Non-trainable Parameters: {non_trainable_params:,}")
+        print(f"Model Size (MB):          {total_params * 4 / (1024**2):.2f}")
+        print("=" * 60)
+        
+        return total_params, trainable_params, non_trainable_params
+
+
+    def compute_gflops(model, input_shape=(1, 4, 32, 32), is_diffusers_model=True):
+        """
+        Compute GFLOPs using thop library.
+        
+        Args:
+            model: The model to analyze
+            input_shape: Tuple of (batch_size, channels, height, width)
+            is_diffusers_model: Whether the model is from diffusers library
+        
+        Returns:
+            gflops (float): Estimated GFLOPs
+            params (int): Number of parameters
+        """
+        device = next(model.parameters()).device
+        
+        # Prepare inputs
+        x = torch.randn(input_shape).to(device)
+        t = torch.randint(0, 1000, (input_shape[0],)).to(device)
+        
+        if is_diffusers_model:
+            # For diffusers models, we need to wrap the forward call
+            class DiffusersWrapper(nn.Module):
+                def __init__(self, model):
+                    super().__init__()
+                    self.model = model
+                
+                def forward(self, x, t):
+                    return self.model(x, t).sample
+            
+            wrapped_model = DiffusersWrapper(model).to(device)
+            macs, params = profile(wrapped_model, inputs=(x, t), verbose=False)
+        else:
+            # For custom models
+            macs, params = profile(model, inputs=(x, t), verbose=False)
+        
+        # Convert MACs to GFLOPs (1 MAC ≈ 2 FLOPs)
+        gflops = macs * 2 / 1e9
+        
+        return gflops, params
+
+
+    def compute_model_complexity(model, input_shape=(1, 4, 32, 32), is_diffusers_model=True):
+        """
+        Compute and print complete model complexity metrics.
+        
+        Args:
+            model: The model to analyze
+            input_shape: Tuple of (batch_size, channels, height, width)
+            is_diffusers_model: Whether the model is from diffusers library
+        """
+        print("\n" + "=" * 60)
+        print("MODEL COMPLEXITY ANALYSIS")
+        print("=" * 60)
+        
+        # Count parameters
+        total_params, trainable_params, non_trainable_params = get_number_parameter(model)
+        
+        # Compute GFLOPs
+        print("\nComputing GFLOPs...")
+        try:
+            gflops, params_from_thop = compute_gflops(model, input_shape, is_diffusers_model)
+            print("=" * 60)
+            print("Computational Complexity")
+            print("=" * 60)
+            print(f"Input Shape:              {input_shape}")
+            print(f"GFLOPs per forward pass:  {gflops:.2f}")
+            print(f"Parameters (from thop):   {params_from_thop:,} ({params_from_thop/1e6:.2f} M)")
+            print("=" * 60)
+        except Exception as e:
+            print(f"Could not compute GFLOPs: {e}")
+            print("=" * 60)
+
+
+    model = UNet2DModel(
+        sample_size=32,
+        in_channels=4,
+        out_channels=4,
+        block_out_channels=[128, 256, 256, 256]
+    )
+    
+    # Test forward pass
+    x = torch.randn(1, 4, 32, 32)
+    t = torch.randint(0, 100, (1,))
+    out = model(x, t).sample
+    print(f"\nOutput shape: {out.shape}\n")
+    
+    # Compute model complexity
+    compute_model_complexity(model, input_shape=(1, 4, 32, 32), is_diffusers_model=True)
